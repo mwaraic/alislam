@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Send, Loader2, Copy, Check, ExternalLink } from 'lucide-react'
+import { Send, Loader2, Copy, Check, ExternalLink, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -277,6 +277,13 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingComplete, setStreamingComplete] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState('ruhani-khazain')
+
+  const indexOptions = [
+    { value: 'ruhani-khazain', label: 'Ruhani Khazain' },
+    { value: 'fiqh', label: 'Fiqh-ul-Masih' },
+    { value: 'seerat-ul-mahdi', label: 'Seerat-ul-Mahdi' }
+  ]
 
   const processedAnswer = useMemo(() => {
     if (!answer) return '';
@@ -304,7 +311,8 @@ export default function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: question.trim()
+          message: question.trim(),
+          index: selectedIndex
         })
       })
 
@@ -416,6 +424,28 @@ export default function ChatInterface() {
       {/* Question Input Section */}
       <div className="p-6 border border-border rounded-lg bg-card/50">
         <h2 className="text-lg font-semibold mb-4 text-foreground">Ask a Question</h2>
+        
+        {/* Index Selector */}
+        <div className="mb-4">
+          <label htmlFor="index-selector" className="block text-sm font-medium text-foreground mb-2">
+            <BookOpen className="inline h-4 w-4 mr-1" />
+            Select Text Collection:
+          </label>
+          <select
+            id="index-selector"
+            value={selectedIndex}
+            onChange={(e) => setSelectedIndex(e.target.value)}
+            disabled={isLoading}
+            className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {indexOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex space-x-3">
           <textarea
             value={question}
@@ -447,7 +477,12 @@ export default function ChatInterface() {
       {(answer || isLoading) && (
         <div className="p-6 border border-border rounded-lg bg-card/50">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Answer</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-foreground">Answer</h2>
+              <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                {indexOptions.find(opt => opt.value === selectedIndex)?.label}
+              </span>
+            </div>
             {answer && !isLoading && (
               <div className="flex items-center gap-2">
                 <CopyButton 
@@ -573,28 +608,42 @@ export default function ChatInterface() {
       {!answer && !isLoading && !question && (
         <div className="text-center py-12">
           <div className="max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold text-foreground mb-4">Welcome to Alislam Chat</h3>
+            <h3 className="text-2xl font-bold text-foreground mb-4">Welcome to Alislam Q&A</h3>
             <p className="text-muted-foreground text-lg leading-relaxed">
               Ask any question and get answers from our Islamic knowledge base. 
-              Our AI will search through religious texts and scholarly materials to provide you with accurate information.
+              Select from different text collections and our AI will search through the selected texts to provide you with accurate information.
             </p>
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="p-4 border border-border rounded-lg bg-muted/50">
-                <h4 className="font-semibold text-foreground mb-2">Example Questions:</h4>
-                <ul className="text-muted-foreground space-y-1 text-left">
-                  <li>• What are the five pillars of Islam?</li>
-                  <li>• How do I perform wudu?</li>
-                  <li>• What is the significance of Ramadan?</li>
-                </ul>
+                <h4 className="font-semibold text-foreground mb-2">Ruhani Khazain</h4>
+                <p className="text-muted-foreground text-left">
+                  The spiritual treasury containing the divine revelations and writings.
+                </p>
+                <p className="text-xs text-muted-foreground/80 mt-2 font-medium">
+                  Currently available: Vol 3, Vol 5, Vol 7, Vol 18, Vol 22
+                </p>
               </div>
               <div className="p-4 border border-border rounded-lg bg-muted/50">
-                <h4 className="font-semibold text-foreground mb-2">How it works:</h4>
-                <ul className="text-muted-foreground space-y-1 text-left">
-                  <li>• Ask your question in natural language</li>
-                  <li>• AI searches relevant Islamic texts</li>
-                  <li>• Get accurate, source-based answers</li>
-                </ul>
+                <h4 className="font-semibold text-foreground mb-2">Fiqh-ul-Masih</h4>
+                <p className="text-muted-foreground text-left">
+                  Comprehensive jurisprudence and legal guidance for spiritual and practical matters.
+                </p>
               </div>
+              <div className="p-4 border border-border rounded-lg bg-muted/50">
+                <h4 className="font-semibold text-foreground mb-2">Seerat-ul-Mahdi</h4>
+                <p className="text-muted-foreground text-left">
+                  Biographical accounts and historical records.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 p-4 border border-border rounded-lg bg-muted/50">
+              <h4 className="font-semibold text-foreground mb-2">How it works:</h4>
+              <ul className="text-muted-foreground space-y-1">
+                <li>• Select your preferred text collection from the dropdown</li>
+                <li>• Ask your question in natural language</li>
+                <li>• AI searches the selected texts for relevant information</li>
+                <li>• Get accurate, source-based answers with references</li>
+              </ul>
             </div>
           </div>
         </div>

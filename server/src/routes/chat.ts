@@ -40,7 +40,7 @@ const initializePinecone = (apiKey: string) => {
 }
 
 // Create RAG chain using invoke pattern
-const createRAGChain = async (env: Bindings) => {
+const createRAGChain = async (env: Bindings, indexName: string) => {
   // Initialize Gemini components
   const llm = new ChatGoogleGenerativeAI({
     apiKey: env.GEMINI_API_KEY,
@@ -56,7 +56,7 @@ const createRAGChain = async (env: Bindings) => {
 
   // Initialize Pinecone
   const pinecone = initializePinecone(env.PINECONE_API_KEY)
-  const index = pinecone.Index(env.PINECONE_INDEX)
+  const index = pinecone.Index(indexName)
 
   // Create vector store
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
@@ -68,14 +68,34 @@ const createRAGChain = async (env: Bindings) => {
     k: 3, // Number of documents to retrieve
   })
 
-  // Create prompt template
-  const prompt = PromptTemplate.fromTemplate(`
-You are an Ahmadi scholar who answer general questions.
-Use the following books of the Promised Messiah A.S to answer questions.
-Add references to the sources of the answer for example: Ruhani Khazain Vol. X Pg. X
+  // Create prompt template with dynamic collection name
+  const getCollectionDisplayName = (indexName: string) => {
+    switch (indexName) {
+      case 'ruhani-khazain':
+        return 'Ruhani Khazain'
+      case 'fiqh':
+        return 'Fiqh-ul-Masih'
+      case 'seerat-ul-mahdi':
+        return 'Seerat-ul-Mahdi'
+      default:
+        return 'Islamic texts'
+    }
+  }
+
+  const collectionDisplayName = getCollectionDisplayName(indexName)
+
+  const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi scholar who answer general questions.
+
+Guidelines:
+- Use the following books from ${collectionDisplayName} to answer questions.
+- Add references to the sources of the answer for example: Ruhani Khazain Vol. X Pg. X, Seerat ul Mahdi Vol. X Part X. Pg. X Narration X
+- If the answer is not found in the books, say "I didn't find the answer in the ${collectionDisplayName} collection"
+- Always start with "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ"
+- Add صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ when Prophet Muhammad is mentioned
+- Add عَلَيْهِ السَّلَّمِ when other prophets are mentioned
 
 Question: {question}
-Books: {context}
+Books from ${collectionDisplayName}: {context}
 Answer:`)
 
   // Create the RAG chain using RunnableSequence with proper types
@@ -99,25 +119,30 @@ Answer:`)
 chatRoute.post('/', async (c) => {
   try {
     const env = c.get('env') || c.env
-    const { message } = await c.req.json()
+    const { message, index } = await c.req.json()
 
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Valid message string is required' }, 400)
     }
+
+    // Validate index parameter
+    const validIndexes = ['ruhani-khazain', 'fiqh', 'seerat-ul-mahdi']
+    const selectedIndex = index && validIndexes.includes(index) ? index : 'ruhani-khazain'
 
     // Debug: Log environment variable status (without exposing actual keys)
     console.log('Environment variables check:')
     console.log('GEMINI_API_KEY:', env.GEMINI_API_KEY ? `Set (${env.GEMINI_API_KEY.substring(0, 10)}...)` : '❌ GEMINI_API_KEY not set or invalid')
     console.log('PINECONE_API_KEY:', env.PINECONE_API_KEY ? `Set (${env.PINECONE_API_KEY.substring(0, 10)}...)` : '❌ PINECONE_API_KEY not set or invalid')
     console.log('PINECONE_INDEX:', env.PINECONE_INDEX ? `Set (${env.PINECONE_INDEX})` : '❌ PINECONE_INDEX not set or invalid')
+    console.log('Selected Index:', selectedIndex)
 
     // Validate environment variables
-    if (!env.GEMINI_API_KEY || !env.PINECONE_API_KEY || !env.PINECONE_INDEX) {
+    if (!env.GEMINI_API_KEY || !env.PINECONE_API_KEY) {
       return c.json({ error: 'Missing required environment variables' }, 500)
     }
 
-    // Create RAG chain
-    const ragChain = await createRAGChain(env)
+    // Create RAG chain with selected index
+    const ragChain = await createRAGChain(env, selectedIndex)
 
     // Create a readable stream for streaming response
     const { readable, writable } = new TransformStream()
