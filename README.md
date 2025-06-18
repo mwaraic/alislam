@@ -1,24 +1,28 @@
 # Alislam Q&A
 
-A Retrieval-Augmented Generation (RAG) question-and-answer application built with React, Hono, LangChain, Pinecone, and Google's Gemini AI. The app allows users to ask single questions and receive answers based on an Islamic knowledge base stored in Pinecone vector database.
+A Retrieval-Augmented Generation (RAG) question-and-answer application built with React, Hono, LangChain, Pinecone, and Google's Gemini AI. The app allows users to ask questions and receive streaming answers based on multiple Islamic knowledge bases stored in Pinecone vector database.
 
 ## Architecture
 
 - **Frontend**: React with TypeScript, Vite, and Tailwind CSS
 - **Backend**: Hono framework with LangChain for RAG implementation
-- **AI Model**: Google Gemini Pro for chat completions and embeddings
+- **AI Model**: Google Gemini 2.5 Flash Lite for chat completions and Gemini Embedding Exp for embeddings
 - **Vector Database**: Pinecone for document storage and retrieval
+- **Reranking**: Cohere Rerank for improved search relevance
 - **Deployment**: Cloudflare Workers for serverless backend and static hosting
 
 ## Features
 
-- 🤖 Single-turn Q&A powered by Gemini AI and RAG
-- 🔍 Vector similarity search with Pinecone
-- 💨 Real-time responses with loading states
-- 📱 Responsive design with modern UI
-- ⚡ Fast serverless deployment on Cloudflare
-- 🎨 Beautiful UI with Tailwind CSS and proper theming
-- 📖 Islamic knowledge base integration
+- 🤖 **Streaming Q&A** powered by Gemini AI and RAG with real-time token streaming
+- 🔍 **Advanced Retrieval** with Cohere reranking for improved search relevance
+- 📚 **Multiple Book Collections** including Ruhani Khazain, Fiqh-ul-Masih, and Fiqh-ul-Ahmadiyya
+- 💨 **Real-time responses** with streaming and loading states
+- 📱 **Responsive design** with modern UI components
+- ⚡ **Fast serverless deployment** on Cloudflare
+- 🎨 **Beautiful UI** with Tailwind CSS and proper theming
+- 🔗 **Source linking** with automatic new.alislam.org references
+- 📋 **Question templates** for common Islamic queries
+- 📄 **Rich content rendering** with markdown, tables, and code blocks
 
 ## Project Structure
 
@@ -27,22 +31,28 @@ alislam/
 ├── client/                 # React frontend
 │   ├── src/
 │   │   ├── components/    # React components
-│   │   ├── lib/           # Utility functions
-|   |   |__ pages/         # Pages
-│   │   ├── App.tsx        # Main app component
-│   │   └── main.tsx       # Entry point
+│   │   │   └── chat/     # Chat-specific components
+│   │   ├── data/         # Configuration data
+│   │   ├── lib/          # Utility functions
+│   │   ├── pages/        # Pages
+│   │   ├── types/        # TypeScript types
+│   │   ├── App.tsx       # Main app component
+│   │   └── main.tsx      # Entry point
 │   ├── package.json
 │   └── vite.config.ts
 ├── server/                 # Hono backend
 │   ├── src/
-|   |______ services/      # API services
-│   │   ├── routes/        # API routes
-│   │   └── index.ts       # Server entry point
-│   ├── build.js           # Build script
+│   │   ├── services/     # Business logic services
+│   │   ├── routes/       # API routes
+│   │   ├── dev.ts        # Development server
+│   │   └── index.ts      # Server entry point
+│   ├── build.js          # Build script
 │   ├── package.json
 │   └── tsconfig.json
-├── wrangler.toml          # Cloudflare Workers config
-├── package.json           # Root package.json with build scripts
+├── notebooks/             # Jupyter notebooks for development
+├── resources/             # Data files and resources
+├── wrangler.toml         # Cloudflare Workers config
+├── package.json          # Root package.json with build scripts
 └── README.md
 ```
 
@@ -53,6 +63,7 @@ alislam/
 - Node.js 18+ and npm
 - Gemini API key from Google AI Studio
 - Pinecone account and API key
+- Cohere API key for reranking
 - Cloudflare account (for deployment)
 
 ### Quick Start
@@ -79,16 +90,15 @@ alislam/
    ```
    GEMINI_API_KEY=your-gemini-api-key
    PINECONE_API_KEY=your-pinecone-api-key
-   PINECONE_INDEX=your-pinecone-index
+   COHERE_API_KEY=your-cohere-api-key
    ```
 
-   For production, update `wrangler.toml`:
+   For production, set secrets using wrangler:
 
-   ```toml
-   [env.production.vars]
-   GEMINI_API_KEY = "your-gemini-api-key"
-   PINECONE_API_KEY = "your-pinecone-api-key"
-   PINECONE_INDEX = "your-pinecone-index"
+   ```bash
+   wrangler secret put GEMINI_API_KEY
+   wrangler secret put PINECONE_API_KEY
+   wrangler secret put COHERE_API_KEY
    ```
 
 4. Start development servers:
@@ -144,24 +154,22 @@ npm run cf:dev
 
 ### POST `/api/chat`
 
-Send a question and receive a RAG-powered answer.
+Send a question and receive a streaming RAG-powered answer.
 
 **Request Body:**
 
 ```json
 {
-  "message": "What are the five pillars of Islam?"
+  "message": "What are the five pillars of Islam?",
+  "index": "ruhani-khazain",
+  "namespace": "__default__",
+  "displayName": "Ruhani Khazain",
+  "format": "Ruhani Khazain, Vol. X, Pg. X"
 }
 ```
 
 **Response:**
-
-```json
-{
-  "message": "The five pillars of Islam are...",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+Streaming text response with real-time token delivery.
 
 ### GET `/api/health`
 
@@ -179,13 +187,15 @@ Health check endpoint.
 
 ## How It Works
 
-1. **User asks a question** in the simple Q&A interface
-2. **Question is sent** to the Hono backend via API
-3. **LangChain retriever** searches Pinecone vector database for relevant documents
-4. **Gemini AI** generates an answer based on the retrieved context
-5. **Answer is displayed** to the user in a clean, readable format
-
-This is a **single-turn system** - each question is independent with no conversation history.
+1. **User selects a book collection** and asks a question in the interface
+2. **Question is sent** to the Hono backend via API with collection metadata
+3. **Advanced retrieval pipeline**:
+   - Initial similarity search retrieves 50 relevant documents
+   - Cohere reranker improves relevance by reordering results
+   - Top 5 most relevant documents are selected for context
+4. **Gemini AI generates streaming response** based on the retrieved context
+5. **Real-time streaming** delivers tokens as they're generated
+6. **Rich formatting** renders the answer with proper Islamic references and links
 
 ## Configuration
 
@@ -199,60 +209,12 @@ This is a **single-turn system** - each question is independent with no conversa
 1. Create a Pinecone account and index
 2. Note your API key, environment, and index name
 3. Add them to your environment variables
-4. Populate your index with Islamic texts and documents
+4. Populate your index with Islamic texts and documents in appropriate namespaces
 
-### RAG Configuration
+### Cohere Setup
 
-The RAG chain is configured in `server/src/routes/chat.ts`:
-
-- **Model**: `gemini-pro` (can be changed to other Gemini models)
-- **Temperature**: 0.7 (controls response creativity)
-- **Retrieval Count**: 4 documents (k=4 in retriever)
-- **Embedding Model**: `embedding-001`
-
-### Customizing the RAG Chain
-
-Modify the RAG chain in `server/src/routes/chat.ts`:
-
-```typescript
-// Customize retrieval
-const retriever = vectorStore.asRetriever({
-  k: 6, // Retrieve more documents
-  searchType: "similarity_score_threshold",
-  searchKwargs: { scoreThreshold: 0.8 },
-});
-
-// Customize prompt for Islamic context
-const prompt = PromptTemplate.fromTemplate(`
-You are a knowledgeable Islamic scholar AI assistant. Answer the question based on authentic Islamic sources.
-
-Context from Islamic texts:
-{context}
-
-Question: {question}
-
-Answer:`);
-```
-
-## User Interface
-
-The interface is designed for simplicity:
-
-- **Question Input**: Large text area for typing questions
-- **Submit Button**: Send question to get answer
-- **Answer Display**: Clean, readable response area
-- **New Question**: Easy way to ask another question
-
-No conversation history is maintained - each question is treated independently.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CORS Errors**: Update the CORS origins in `server/src/index.ts`
-2. **Build Errors**: Run `npm run build` from root directory
-3. **Environment Variables**: Ensure all required variables are set in `wrangler.toml`
-4. **Empty Responses**: Check if Pinecone index has documents and embeddings
+1. Get your API key from [Cohere](https://cohere.ai/)
+2. Add it to your environment variables as `COHERE_API_KEY`
 
 ### Environment Variables Check
 
