@@ -65,7 +65,6 @@ export default function ChatPage() {
         setStreamingComplete(true)
       } else {
         // Handle streaming response
-        console.log('Detected streaming response, setting up reader...')
         const reader = response.body?.getReader()
         const decoder = new TextDecoder()
         
@@ -75,17 +74,12 @@ export default function ChatPage() {
 
         let accumulatedAnswer = ''
         let chunkNumber = 0
-        console.log('Starting to read stream...')
         
         try {
           while (true) {
-            console.log(`Reading chunk ${chunkNumber + 1}...`)
             const { done, value } = await reader.read()
-            
-            console.log(`Chunk ${chunkNumber + 1} - done:`, done, 'value length:', value?.length)
-            
+                        
             if (done) {
-              console.log('Stream completed after', chunkNumber, 'chunks')
               // Mark streaming as complete and trigger final render
               flushSync(() => {
                 setIsStreaming(false)
@@ -96,19 +90,11 @@ export default function ChatPage() {
             
             // Decode the chunk and add it to the accumulated answer
             const chunk = decoder.decode(value, { stream: true })
-            console.log(`Chunk ${chunkNumber + 1} decoded:`, {
-              length: chunk.length,
-              content: chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''),
-              firstChar: chunk.charCodeAt(0),
-              lastChar: chunk.charCodeAt(chunk.length - 1)
-            })
             
             if (chunk.length > 0) {
               accumulatedAnswer += chunk
               chunkNumber++
-              
-              console.log(`Setting answer state with ${accumulatedAnswer.length} total chars`)
-              
+                            
               // Force immediate render with flushSync
               flushSync(() => {
                 setAnswer(accumulatedAnswer)
@@ -119,12 +105,10 @@ export default function ChatPage() {
             }
           }
         } finally {
-          console.log('Releasing reader lock')
           reader.releaseLock()
         }
       }
     } catch (error) {
-      console.error('Error sending message:', error)
       flushSync(() => {
         setAnswer('Sorry, there was an error processing your request. Please try again.')
         setIsStreaming(false)

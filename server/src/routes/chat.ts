@@ -9,17 +9,11 @@ export const chatRoute = new Hono<{ Bindings: ChatBindings; Variables: Variables
 
 // Debug middleware to log all requests
 chatRoute.use('*', async (c, next) => {
-  console.log('Incoming request:', {
-    method: c.req.method,
-    url: c.req.url,
-    headers: Object.fromEntries(c.req.raw.headers.entries())
-  })
   await next()
 })
 
 // Handle OPTIONS preflight requests
 chatRoute.options('/', (c) => {
-  console.log('Handling OPTIONS request')
   return new Response(null, {
     status: 204,
     headers: {
@@ -44,14 +38,6 @@ chatRoute.post('/', async (c) => {
     const chatService = ChatService.getInstance()
     const selectedIndex = chatService.validateIndex(index)
     const selectedNamespace = namespace || '__default__'
-    
-    // Debug: Log environment variable status (without exposing actual keys)
-    console.log('Environment variables check:')
-    console.log('GEMINI_API_KEY:', env.GEMINI_API_KEY ? `Set (${env.GEMINI_API_KEY.substring(0, 10)}...)` : '❌ GEMINI_API_KEY not set or invalid')
-    console.log('PINECONE_API_KEY:', env.PINECONE_API_KEY ? `Set (${env.PINECONE_API_KEY.substring(0, 10)}...)` : '❌ PINECONE_API_KEY not set or invalid')
-    console.log('PINECONE_INDEX:', env.PINECONE_INDEX ? `Set (${env.PINECONE_INDEX})` : '❌ PINECONE_INDEX not set or invalid')
-    console.log('Selected Index:', selectedIndex)
-    console.log('Selected Namespace:', selectedNamespace)
 
     // Validate environment variables
     if (!chatService.validateEnvironment(env)) {
@@ -68,15 +54,12 @@ chatRoute.post('/', async (c) => {
 
     // Start the streaming process
     ;(async () => {
-      try {
-        console.log('Starting streaming for question:', String(message).trim())
-        
+      try {        
         // Use streamEvents to get token-level streaming from the LLM
         const eventStream = ragChain.streamEvents({
           question: String(message).trim()
         }, { version: "v1" })
 
-        console.log('Got event stream, starting to iterate...')
         let chunkCount = 0
         let totalChars = 0
         
@@ -88,12 +71,9 @@ chatRoute.post('/', async (c) => {
             if (chunk && typeof chunk === 'string' && chunk.length > 0) {
               chunkCount++
               totalChars += chunk.length
-              
-              console.log(`Streaming chunk ${chunkCount}: "${chunk}" (${chunk.length} chars)`)
-              
+                            
               // Prevent infinite streaming (safety measure)
               if (chunkCount > 200) {
-                console.log('🛑 Stopping stream after 200 chunks to prevent infinite loop')
                 break
               }
               
@@ -107,14 +87,11 @@ chatRoute.post('/', async (c) => {
           }
         }
         
-        console.log(`✅ Streaming completed successfully. Total chunks: ${chunkCount}, total chars: ${totalChars}`)
       } catch (error) {
-        console.error('❌ Streaming error:', error)
         const errorMessage = 'Sorry, there was an error processing your request. Please try again.'
         await writer.write(encoder.encode(errorMessage))
       } finally {
         try {
-          console.log('🔒 Closing writer...')
           await writer.close()
         } catch (closeError) {
           console.error('Error closing writer:', closeError)
