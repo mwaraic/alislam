@@ -1,148 +1,65 @@
 import { Hono } from 'hono'
-import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai'
-import { PineconeStore } from '@langchain/pinecone'
-import { Pinecone } from '@pinecone-database/pinecone'
-import { PromptTemplate } from '@langchain/core/prompts'
-import { RunnableSequence } from '@langchain/core/runnables'
-import { StringOutputParser } from '@langchain/core/output_parsers'
-import { Document } from '@langchain/core/documents'
-
-type Bindings = {
-  GEMINI_API_KEY: string
-  PINECONE_API_KEY: string
-  PINECONE_INDEX: string
-}
+import { ChatService, ChatBindings } from '../services/chat'
 
 type Variables = {
-  env?: Bindings
+  env?: ChatBindings
 }
 
-export const chatRoute = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+export const chatRoute = new Hono<{ Bindings: ChatBindings; Variables: Variables }>()
 
-// CORS preflight handler
-chatRoute.options('/', async (c) => {
+// Debug middleware to log all requests
+chatRoute.use('*', async (c, next) => {
+  console.log('Incoming request:', {
+    method: c.req.method,
+    url: c.req.url,
+    headers: Object.fromEntries(c.req.raw.headers.entries())
+  })
+  await next()
+})
+
+// Handle OPTIONS preflight requests
+chatRoute.options('/', (c) => {
+  console.log('Handling OPTIONS request')
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': 'http://localhost:5173',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
     }
   })
 })
 
-// Initialize Pinecone client
-const initializePinecone = (apiKey: string) => {
-  return new Pinecone({
-    apiKey: apiKey,
-  })
-}
-
-// Create RAG chain using invoke pattern
-const createRAGChain = async (env: Bindings, indexName: string) => {
-  // Initialize Gemini components
-  const llm = new ChatGoogleGenerativeAI({
-    apiKey: env.GEMINI_API_KEY,
-    modelName: 'gemini-2.5-flash-preview-05-20',
-    temperature: 0.7,
-    streaming: true,
-  })
-
-  const embeddings = new GoogleGenerativeAIEmbeddings({
-    apiKey: env.GEMINI_API_KEY,
-    modelName: 'gemini-embedding-exp-03-07',
-  })
-
-  // Initialize Pinecone
-  const pinecone = initializePinecone(env.PINECONE_API_KEY)
-  const index = pinecone.Index(indexName)
-
-  // Create vector store
-  const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-    pineconeIndex: index,
-  })
-
-  // Create retriever
-  const retriever = vectorStore.asRetriever({
-    k: 3, // Number of documents to retrieve
-  })
-
-  // Create prompt template with dynamic collection name
-  const getCollectionDisplayName = (indexName: string) => {
-    switch (indexName) {
-      case 'ruhani-khazain':
-        return 'Ruhani Khazain'
-      case 'fiqh':
-        return 'Fiqh-ul-Masih'
-      case 'seerat-ul-mahdi':
-        return 'Seerat-ul-Mahdi'
-      default:
-        return 'Islamic texts'
-    }
-  }
-
-  const collectionDisplayName = getCollectionDisplayName(indexName)
-
-  const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi scholar who answer general questions.
-
-Guidelines:
-- Use the following books from ${collectionDisplayName} to answer questions.
-- Add references to the sources of the answer for example: Ruhani Khazain Vol. X Pg. X, Seerat ul Mahdi Vol. X Part X. Pg. X Narration X
-- If the answer is not found in the books, say "I didn't find the answer in the ${collectionDisplayName} collection"
-- Always start with "بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ"
-- Add صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ when Prophet Muhammad is mentioned
-- Add عَلَيْهِ السَّلَّمِ when other prophets are mentioned
-
-Question: {question}
-Books from ${collectionDisplayName}: {context}
-Answer:`)
-
-  // Create the RAG chain using RunnableSequence with proper types
-  const ragChain = RunnableSequence.from([
-    {
-      context: async (input: { question: string }) => {
-        const docs = await retriever.invoke(input.question)
-        return docs.map((doc: Document) => doc.pageContent).join('\n\n')
-      },
-      question: (input: { question: string }) => input.question,
-    },
-    prompt,
-    llm,
-    new StringOutputParser(),
-  ])
-
-  return ragChain
-}
-
 // POST /api/chat - Handle chat messages with streaming
 chatRoute.post('/', async (c) => {
   try {
     const env = c.get('env') || c.env
-    const { message, index } = await c.req.json()
+    const { message, index, namespace, displayName, format } = await c.req.json()
 
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Valid message string is required' }, 400)
     }
 
-    // Validate index parameter
-    const validIndexes = ['ruhani-khazain', 'fiqh', 'seerat-ul-mahdi']
-    const selectedIndex = index && validIndexes.includes(index) ? index : 'ruhani-khazain'
-
+    const chatService = ChatService.getInstance()
+    const selectedIndex = chatService.validateIndex(index)
+    const selectedNamespace = namespace || '__default__'
+    
     // Debug: Log environment variable status (without exposing actual keys)
     console.log('Environment variables check:')
     console.log('GEMINI_API_KEY:', env.GEMINI_API_KEY ? `Set (${env.GEMINI_API_KEY.substring(0, 10)}...)` : '❌ GEMINI_API_KEY not set or invalid')
     console.log('PINECONE_API_KEY:', env.PINECONE_API_KEY ? `Set (${env.PINECONE_API_KEY.substring(0, 10)}...)` : '❌ PINECONE_API_KEY not set or invalid')
     console.log('PINECONE_INDEX:', env.PINECONE_INDEX ? `Set (${env.PINECONE_INDEX})` : '❌ PINECONE_INDEX not set or invalid')
     console.log('Selected Index:', selectedIndex)
+    console.log('Selected Namespace:', selectedNamespace)
 
     // Validate environment variables
-    if (!env.GEMINI_API_KEY || !env.PINECONE_API_KEY) {
+    if (!chatService.validateEnvironment(env)) {
       return c.json({ error: 'Missing required environment variables' }, 500)
     }
 
-    // Create RAG chain with selected index
-    const ragChain = await createRAGChain(env, selectedIndex)
+    // Get RAG chain with selected index
+    const ragChain = await chatService.getRAGChain(env, selectedIndex, selectedNamespace, displayName, format)
 
     // Create a readable stream for streaming response
     const { readable, writable } = new TransformStream()

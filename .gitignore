@@ -4,3 +4,5 @@ dist/
 .wrangler
 .venv
 chroma_db
+Agent_LangGraph.ipynb
+~

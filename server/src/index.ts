@@ -18,11 +18,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 // Configure CORS for development and production
 app.use('*', cors({
-  origin: [
-    'http://localhost:5173',  // Vite dev server
-    'https://alislam-qa.tickrbot.workers.dev',  // Production URL
-    'https://alislam-qa.your-domain.com'  // Custom domain if any
-  ],
+  origin: '*',  // Allow all origins in development
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization']

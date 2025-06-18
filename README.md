@@ -26,14 +26,16 @@ A Retrieval-Augmented Generation (RAG) question-and-answer application built wit
 alislam/
 ├── client/                 # React frontend
 │   ├── src/
-│   │   ├── components/     # React components
+│   │   ├── components/    # React components
 │   │   ├── lib/           # Utility functions
+|   |   |__ pages/         # Pages
 │   │   ├── App.tsx        # Main app component
 │   │   └── main.tsx       # Entry point
 │   ├── package.json
 │   └── vite.config.ts
 ├── server/                 # Hono backend
 │   ├── src/
+|   |______ services/      # API services
 │   │   ├── routes/        # API routes
 │   │   └── index.ts       # Server entry point
 │   ├── build.js           # Build script
@@ -261,14 +263,13 @@ wrangler secret list
 # Set production secrets
 wrangler secret put GEMINI_API_KEY
 wrangler secret put PINECONE_API_KEY
-wrangler secret put PINECONE_INDEX
+wrangler secret put COHERE_API_KEY
 ```
 
 ### Development URLs
 
 - **Client**: http://localhost:5173
 - **Server**: http://localhost:8787
-- **Production**: https://alislam-qa.tickrbot.workers.dev
 
 ## Contributing
 
