@@ -40,6 +40,11 @@ function getFirstSignificantText(text: string) {
     .slice(0, 200);
 }
 
+// Convert code= parameter to page= parameter in URLs within text
+function convertCodeToPageInText(text: string): string {
+  return text.replace(/code=/g, 'page=')
+}
+
 export function AnswerDisplay({
   answer,
   isLoading,
@@ -83,6 +88,9 @@ export function AnswerDisplay({
   const firstText = getFirstSignificantText(answer);
   const dir = isRTL(firstText) ? 'rtl' : 'ltr';
   const textAlign = isRTL(firstText) ? 'right' : 'left';
+  
+  // Convert URLs in answer text for copying
+  const answerForCopy = convertCodeToPageInText(answer);
 
   return (
     <div className="p-6 border border-border rounded-lg bg-card/50 relative">
@@ -122,7 +130,7 @@ export function AnswerDisplay({
         {answer && !isLoading && (
           <div className="flex items-center gap-2">
             <CopyButton 
-              text={answer}
+              text={answerForCopy}
               className="text-muted-foreground hover:text-foreground hover:bg-muted"
             />
             <button

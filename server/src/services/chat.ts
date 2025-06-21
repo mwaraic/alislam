@@ -78,17 +78,41 @@ export class ChatService {
       baseRetriever: similarityRetriever
     })
 
-    const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi scholar who answer general questions.
+    const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi Muslim scholar specializing in answering questions based on authoritative Islamic literature. Your responses should be scholarly, accurate, and respectful.
+Core Guidelines
+Source Material Usage
 
-Guidelines:
-- Use the following books from ${displayName} to answer questions.
-- Add inline references and new.alislam.org web links to the sources of the answer in the format: (${format}) https://new.alislam.org/library/books/<book-id>?option=options&page=<page-number>
-- If the answer is not found in the books, say "I didn't find the answer in the ${displayName} collection"
-- Add صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ when Prophet Muhammad is mentioned
-- Add عَلَيْهِ السَّلَّامُ when other prophets are mentioned
+- Use ${displayName} ${indexName == 'ruhani-khazain' ? 'by Hazrat Mirza Ghulam Ahmad (عليه السلام)' : ''} provided in the context to answer questions
+- Carefully evaluate whether the retrieved documents are contextually relevant to the question before formulating your answer
+- If the provided context does not contain relevant information, silently ignore it and proceed with the guidelines below
+
+Citation Requirements
+
+- All quotations, paraphrased content, and arguments derived from ${displayName} must be meticulously cited
+- Use this exact citation format: (${format}) https://new.alislam.org/library/books/<book-id>?option=options&code=<link-code>
+- When applicable and helpful, include both the original text (in Arabic/Urdu) and its translation
+
+Religious Honorifics
+
+- Always add صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ after mentioning Prophet Muhammad
+- Always add عَلَيْهِ السَّلَّامُ after mentioning other prophets
+
+Response Structure
+
+- Provide a clear, direct response to the question
+- Include relevant quotations and references from the source material
+- Provide necessary background or explanation when helpful
+- If the answer is not found in the provided books, state: "I didn't find the answer in the ${displayName} collection"
+
+Scholarly Standards
+
+- Ensure all citations and references are precise
+- Present information objectively based on the source material
+- Explain complex concepts in accessible language while maintaining scholarly rigor
+- Maintain a respectful and reverent tone throughout all responses
 
 Question: {question}
-Books from ${displayName}: {context}
+${displayName}: {context}
 Answer:`)
 
     // Create the RAG chain using RunnableSequence
@@ -96,7 +120,122 @@ Answer:`)
       {
         context: async (input: { question: string }) => {
           const docs = await retriever.invoke(input.question)
-          return docs.map((doc: Document) => doc.pageContent+`\n\nLink:${doc.metadata.link}`).join('\n\n')
+          
+          // Extract unique pages and volumes from retrieved documents
+          const volumePages = new Map<string, Set<string>>()
+          
+          docs.forEach((doc: Document) => {
+            if (doc.metadata?.page && doc.metadata?.volume) {
+              const pageNum = doc.metadata.page
+              const volume = doc.metadata.volume
+              
+              // Convert string page to number for arithmetic, then back to string
+              const currentPageNum = parseInt(pageNum.toString())
+              
+              if (!isNaN(currentPageNum)) {
+                if (!volumePages.has(volume)) {
+                  volumePages.set(volume, new Set())
+                }
+                
+                // Add current page and adjacent pages (±1)
+                const pages = volumePages.get(volume)!
+                if (currentPageNum > 1) pages.add((currentPageNum - 1).toString()) // Previous page
+                pages.add(currentPageNum.toString())     // Current page
+                pages.add((currentPageNum + 1).toString()) // Next page
+              }
+            }
+          })
+          
+          console.log('Volume pages map:', Array.from(volumePages.entries()).map(([vol, pages]) => 
+            [vol, Array.from(pages)]
+          ))
+          
+          // Query Pinecone for additional context pages
+          let additionalDocs: Document[] = []
+          
+          for (const [volume, pages] of volumePages.entries()) {
+            const validPages = Array.from(pages).filter(p => {
+              const pageNum = parseInt(p)
+              return !isNaN(pageNum) && pageNum > 0
+            }) // Remove invalid pages
+            
+            if (validPages.length > 0) {
+              const dummy_vector = new Array(3072).fill(0.0)
+              
+              try {
+                const result = await index.query({
+                  vector: dummy_vector,
+                  topK: Math.min(validPages.length * 3, 100), // Increase limit
+                  filter: {
+                    volume: { $eq: volume },
+                    page: { $in: validPages }
+                  },
+                  includeMetadata: true
+                })
+                
+                if (result.matches) {
+                  result.matches.forEach(match => {
+                    // The content might be in different locations depending on how data was stored
+                    let pageContent = ''
+                    const metadata = match.metadata as Record<string, any>
+                    
+                    if (metadata?.pageContent && typeof metadata.pageContent === 'string') {
+                      pageContent = metadata.pageContent
+                    } else if (metadata?.text && typeof metadata.text === 'string') {
+                      pageContent = metadata.text
+                    } else if (metadata?.content && typeof metadata.content === 'string') {
+                      pageContent = metadata.content
+                    }
+                    
+                    if (pageContent && metadata) {
+                      additionalDocs.push({
+                        pageContent: pageContent,
+                        metadata: metadata
+                      })
+                    }
+                  })
+                }
+              } catch (error) {
+                console.error('Error querying Pinecone for additional pages:', error)
+              }
+            }
+          }
+                    
+          // Combine original docs with additional context pages
+          const allDocs = [...docs, ...additionalDocs]
+          
+          console.log('Total docs before deduplication:', allDocs.length)
+          
+          // Remove duplicates based on page and volume
+          const uniqueDocs = Array.from(
+            new Map(
+              allDocs.map(doc => [
+                `${doc.metadata?.volume || 'unknown'}-${doc.metadata?.page || 'unknown'}`,
+                doc
+              ])
+            ).values()
+          )
+          
+          // Sort documents by volume and then by page number
+          uniqueDocs.sort((a, b) => {
+            const volumeA = a.metadata?.volume || 'unknown'
+            const volumeB = b.metadata?.volume || 'unknown'
+            
+            // First sort by volume
+            if (volumeA !== volumeB) {
+              return volumeA.localeCompare(volumeB)
+            }
+            
+            // Then sort by page number within the same volume
+            const pageA = parseInt(a.metadata?.page?.toString() || '0')
+            const pageB = parseInt(b.metadata?.page?.toString() || '0')
+            
+            return pageA - pageB
+          })
+          
+          return uniqueDocs.map((doc: Document) => 
+            `Content:${doc.pageContent} \n\nLink:${doc.metadata?.link?.replace('page=', 'code=') || ''}`
+          ).join('\n\n')
         },
         question: (input: { question: string }) => input.question,
       },
@@ -118,7 +257,7 @@ Answer:`)
   }
 
   public validateIndex(index: string | undefined): string {
-    const validIndexes = ['ruhani-khazain-v2', 'ruhani-khazain', 'fiqh', 'seerat-ul-mahdi', 'pocket-book']
+    const validIndexes = ['ruhani-khazain-v2', 'ruhani-khazain', 'fiqh', 'seerat-ul-mahdi', 'pocket-book', 'ahmadiyya-literature']
     return index && validIndexes.includes(index) ? index : 'ruhani-khazain'
   }
 

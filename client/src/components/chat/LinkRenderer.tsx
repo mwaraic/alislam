@@ -31,47 +31,31 @@ interface LinkRendererProps {
 }
 
 const isGoogleMapsUrl = (url: string): boolean => {
-  return /google\.com\/maps|goo\.gl\/maps|maps\.google\.com/i.test(url)
-}
-
-const isAlislamBookUrl = (url: string): boolean => {
-  return /new\.alislam\.org\/library\/books\/.*(?:\?option=options&)?page=\d+/i.test(url)
+  return /google\.com\/maps|maps\.google\.com|goo\.gl\/maps/i.test(url)
 }
 
 const getGoogleMapsEmbedUrl = (url: string): string => {
   try {
-    // Extract coordinates
-    const coordMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
-    if (coordMatch) {
-      const [, lat, lng] = coordMatch
-      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyAQoQrPy0irLVtpdAuFR_s9V2JB7Xr9Bx0&q=${lat},${lng}`
+    const urlObj = new URL(url)
+    if (urlObj.hostname.includes('google.com')) {
+      const q = urlObj.searchParams.get('q')
+      if (q) {
+        return `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWTgHz-_6t5J8&q=${encodeURIComponent(q)}`
+      }
     }
-    
-    // Extract place name
-    const placeMatch = url.match(/place\/([^\/]+)/)
-    if (placeMatch) {
-      const placeName = decodeURIComponent(placeMatch[1].split('@')[0].replace(/\+/g, ' '))
-      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyAQoQrPy0irLVtpdAuFR_s9V2JB7Xr9Bx0&q=${encodeURIComponent(placeName)}`
-    }
-    
-    // Extract search query
-    const queryMatch = url.match(/[?&]q=([^&]+)/)
-    if (queryMatch) {
-      const query = decodeURIComponent(queryMatch[1])
-      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyAQoQrPy0irLVtpdAuFR_s9V2JB7Xr9Bx0&q=${encodeURIComponent(query)}`
-    }
-    
-    // Extract directions
-    const dirMatch = url.match(/dir\/([^\/]+)\/([^\/]+)/)
-    if (dirMatch) {
-      const [, origin, destination] = dirMatch
-      return `https://www.google.com/maps/embed/v1/directions?key=AIzaSyAQoQrPy0irLVtpdAuFR_s9V2JB7Xr9Bx0&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
-    }
-    
-    return ''
-  } catch (error) {
-    return ''
+    return `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWTgHz-_6t5J8&center=0,0&zoom=10`
+  } catch {
+    return `https://www.google.com/maps/embed/v1/view?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWTgHz-_6t5J8&center=0,0&zoom=10`
   }
+}
+
+const isAlislamBookUrl = (url: string): boolean => {
+  return /new\.alislam\.org\/library\/books\/.*(?:\?option=options&)?code=\d+/i.test(url)
+}
+
+// Convert code= parameter to page= parameter
+const convertCodeToPage = (url: string): string => {
+  return url.replace(/code=/g, 'page=')
 }
 
 export function LinkRenderer({ href, children, onOpenWebView }: LinkRendererProps) {
@@ -80,22 +64,35 @@ export function LinkRenderer({ href, children, onOpenWebView }: LinkRendererProp
   const isGoogleMaps = isGoogleMapsUrl(href)
   const isAlislamBook = isAlislamBookUrl(href)
   const embedUrl = isGoogleMaps ? getGoogleMapsEmbedUrl(href) : ''
+  
+  // Convert code= to page= for alislam book URLs
+  const finalHref = isAlislamBook ? convertCodeToPage(href) : href
+  
+  // Also convert children content if it contains URLs with code=
+  const processedChildren = React.isValidElement(children) ? children : 
+    (typeof children === 'string' && children.includes('code=')) ? 
+      convertCodeToPage(children) : children
 
-  // For Alislam book links, render as icon and open in web view
+  // For Alislam book links, render as a small numbered reference badge
   if (isAlislamBook) {
     return (
       <a
-        href={href}
+        href={finalHref}
         onClick={e => {
           if (onOpenWebView) {
             e.preventDefault()
-            onOpenWebView(href)
+            onOpenWebView(finalHref)
           }
         }}
-        className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors cursor-pointer"
-        title={children?.toString() || href}
+        className="inline-flex items-center text-primary hover:text-primary/80 transition-colors cursor-pointer"
+        title={`Reference: ${finalHref}`}
       >
-        <MinaratIcon className="h-5 w-5 flex-shrink-0" />
+        <div className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 transition-colors">
+          <MinaratIcon className="h-3 w-3 flex-shrink-0" />
+          <span className="text-xs">
+            alislam.org
+          </span>
+        </div>
       </a>
     )
   }
@@ -103,12 +100,13 @@ export function LinkRenderer({ href, children, onOpenWebView }: LinkRendererProp
   return (
     <div className="my-2">
       <a 
-        href={href}
+        href={finalHref}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1 text-primary hover:underline break-all"
+        title={finalHref}
       >
-        {children}
+        {processedChildren}
         <ExternalLink className="h-3 w-3 flex-shrink-0" />
       </a>
       

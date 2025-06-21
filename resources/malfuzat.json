@@ -1,0 +1,431 @@
+[{
+    "id": "693-3622",
+    "title": {
+        "en": "Malfuzat Volume 1",
+        "ur": "ملفوظات (جلد 1)"
+    },
+    "subTitle": "اگست 1891ء تا اگست 1900ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 497,
+        "height": 761,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v1.jpg"
+    },
+    "slug": "malfuzat-1",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2018-12-22",
+        "updated": "2024-06-10",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-3625",
+    "title": {
+        "en": "Malfuzat Volume 2",
+        "ur": "ملفوظات (جلد 2)"
+    },
+    "subTitle": "ستمبر 1900ء تا دسمبر 1901ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 497,
+        "height": 761,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v2.jpg"
+    },
+    "slug": "malfuzat-2",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2018-12-22",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-3627",
+    "title": {
+        "en": "Malfuzat Volume 3",
+        "ur": "ملفوظات (جلد 3)"
+    },
+    "subTitle": "جنوری 1902ء تا دسمبر 1902ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 497,
+        "height": 761,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v3.jpg"
+    },
+    "slug": "malfuzat-3",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2018-12-22",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-3629",
+    "title": {
+        "en": "Malfuzat Volume 4",
+        "ur": "ملفوظات (جلد 4)"
+    },
+    "subTitle": "جنوری 1903ء تا مارچ 1903ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 500,
+        "height": 761,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v4.jpg"
+    },
+    "slug": "malfuzat-4",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2018-12-22",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-3631",
+    "title": {
+        "en": "Malfuzat Volume 5",
+        "ur": "ملفوظات (جلد 5)"
+    },
+    "subTitle": "اپریل 1903ء تا دسمبر 1903ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 496,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v5.jpg"
+    },
+    "slug": "malfuzat-5",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2018-12-22",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-9143",
+    "title": {
+        "en": "Malfuzat Volume 6",
+        "ur": "ملفوظات (جلد 6)"
+    },
+    "subTitle": "جنوری 1904ء تا ستمبر 1904ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 496,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v6.jpg"
+    },
+    "slug": "malfuzat-6",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2019-08-29",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-9146",
+    "title": {
+        "en": "Malfuzat Volume 7",
+        "ur": "ملفوظات (جلد 7)"
+    },
+    "subTitle": "اکتوبر 1904ء تا ستمبر 1905ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 500,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v7.jpg"
+    },
+    "slug": "malfuzat-7",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2019-08-29",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-9149",
+    "title": {
+        "en": "Malfuzat Volume 8",
+        "ur": "ملفوظات (جلد 8)"
+    },
+    "subTitle": "اکتوبر 1905ء تا اکتوبر 1906ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 497,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v8.jpg"
+    },
+    "slug": "malfuzat-8",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2019-08-29",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-9152",
+    "title": {
+        "en": "Malfuzat Volume 9",
+        "ur": "ملفوظات (جلد 9)"
+    },
+    "subTitle": "نومبر 1906ء تا اکتوبر1907ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 493,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v9.jpg"
+    },
+    "slug": "malfuzat-9",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2019-08-29",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+},
+{
+    "id": "693-9155",
+    "title": {
+        "en": "Malfuzat Volume 10",
+        "ur": "ملفوظات (جلد 10)"
+    },
+    "subTitle": "نومبر 1907ء تا مئی 1908ء",
+    "language": "ur",
+    "topics": [
+        {
+            "id": "misc",
+            "name": "Miscellaneous",
+            "slug": "misc"
+        }
+    ],
+    "authorId": "4537",
+    "coAuthors": [],
+    "cover": {
+        "width": 496,
+        "height": 759,
+        "url": "https://files.alislam.cloud/urdu/cover/Malfuzat/Malfuzat-v10.jpg"
+    },
+    "slug": "malfuzat-10",
+    "collectionId": "malfuzat",
+    "bundleId": "",
+    "meta": {
+        "type": "malfuzat"
+    },
+    "dateInfo": {
+        "added": "2019-08-29",
+        "updated": "2019-08-29",
+        "label": "Five Years"
+    },
+    "hasToc": true,
+    "hasVerses": false,
+    "hasDetailedTopics": true,
+    "hasText": true,
+    "searchInfo": {
+        "snippets": [],
+        "uniquePageCount": 0,
+        "totalResultsCount": 0
+    }
+}
+]
