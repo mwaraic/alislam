@@ -5,8 +5,7 @@ import { chatRoute } from './routes/chat'
 type Bindings = {
   GEMINI_API_KEY: string
   PINECONE_API_KEY: string
-  PINECONE_ENVIRONMENT: string
-  PINECONE_INDEX: string
+  COHERE_API_KEY: string
   ASSETS?: any
 }
 
@@ -30,10 +29,11 @@ app.use('*', async (c, next) => {
   // In local development, merge process.env with c.env; in Cloudflare Workers, use c.env
   const env = {
     ...c.env,
+    COHERE_API_KEY: c.env.COHERE_API_KEY || process.env.COHERE_API_KEY,
     GEMINI_API_KEY: c.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
     PINECONE_API_KEY: c.env.PINECONE_API_KEY || process.env.PINECONE_API_KEY,
-    PINECONE_INDEX: c.env.PINECONE_INDEX || process.env.PINECONE_INDEX,
   } as Bindings
+
   c.set('env', env)
   
   await next()

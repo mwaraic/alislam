@@ -12,7 +12,6 @@ import { BaseRetrieverInterface } from '@langchain/core/retrievers'
 export type ChatBindings = {
   GEMINI_API_KEY: string
   PINECONE_API_KEY: string
-  PINECONE_INDEX: string
   COHERE_API_KEY: string
 }
 
@@ -35,11 +34,11 @@ export class ChatService {
     })
   }
 
-  private async createRAGChain(env: ChatBindings, indexName: string, namespace: string, displayName: string, format: string) {
+  private async createRAGChain(env: ChatBindings, indexName: string, namespace: string, displayName: string, description: string, format: string) {
     // Initialize Gemini components
     const llm = new ChatGoogleGenerativeAI({
       apiKey: env.GEMINI_API_KEY,
-      modelName: 'gemini-2.5-flash-lite-preview-06-17',
+      modelName: 'gemini-2.5-pro-preview-06-05',
       temperature: 0.7,
       streaming: true,
     })
@@ -78,13 +77,13 @@ export class ChatService {
       baseRetriever: similarityRetriever
     })
 
-    const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi Muslim scholar specializing in answering questions based on authoritative Islamic literature. Your responses should be scholarly, accurate, and respectful.
+    const prompt = PromptTemplate.fromTemplate(`You are an Ahmadi Muslim scholar specializing in answering questions based on authoritative Ahmadiyya literature. Your responses should be scholarly, accurate, and respectful.
 Core Guidelines
 Source Material Usage
 
-- Use ${displayName} ${indexName == 'ruhani-khazain' ? 'by Hazrat Mirza Ghulam Ahmad (عليه السلام)' : ''} provided in the context to answer questions
-- Carefully evaluate whether the retrieved documents are contextually relevant to the question before formulating your answer
-- If the provided context does not contain relevant information, silently ignore it and proceed with the guidelines below
+- Use ${displayName}: ${description} to answer questions
+- Carefully evaluate whether the retrieved writings are contextually relevant to the question before formulating your answer
+- If the provided writings does not contain relevant information, silently ignore it and proceed with the guidelines below
 
 Citation Requirements
 
@@ -99,14 +98,23 @@ Religious Honorifics
 
 Response Structure
 
+- Add بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ at the beginning of your response
 - Provide a clear, direct response to the question
 - Include relevant quotations and references from the source material
 - Provide necessary background or explanation when helpful
-- If the answer is not found in the provided books, state: "I didn't find the answer in the ${displayName} collection"
+- If the answer is not found in the provided writings, state: "I didn't find the answer in the ${displayName} collection"
+
+Writing Style
+
+- Write with authority and directness - avoid phrases like "the text states," "based on," "according to," or "the collection suggests"
+- Present information as established knowledge rather than tentative observations
+- Use confident declarative statements when presenting information from the sources
+- Integrate quotations smoothly into your narrative without unnecessary attribution phrases
 
 Scholarly Standards
 
 - Ensure all citations and references are precise
+- Present quotations from the reference of the author
 - Present information objectively based on the source material
 - Explain complex concepts in accessible language while maintaining scholarly rigor
 - Maintain a respectful and reverent tone throughout all responses
@@ -120,7 +128,7 @@ Answer:`)
       {
         context: async (input: { question: string }) => {
           const docs = await retriever.invoke(input.question)
-          
+          console.log('Retrieved documents:', docs)
           // Extract unique pages and volumes from retrieved documents
           const volumePages = new Map<string, Set<string>>()
           
@@ -245,11 +253,11 @@ Answer:`)
     ])
   }
 
-  public async getRAGChain(env: ChatBindings, indexName: string, namespace: string = '__default__', displayName: string, format: string) {
-    const cacheKey = `${env.PINECONE_INDEX}-${indexName}-${namespace}`
+  public async getRAGChain(env: ChatBindings, indexName: string, namespace: string = '__default__', displayName: string, description: string, format: string) {
+    const cacheKey = `${indexName}-${namespace}`
     
     if (!this.ragChains.has(cacheKey)) {
-      const chain = await this.createRAGChain(env, indexName, namespace, displayName, format)
+      const chain = await this.createRAGChain(env, indexName, namespace, displayName, description, format)
       this.ragChains.set(cacheKey, chain)
     }
     

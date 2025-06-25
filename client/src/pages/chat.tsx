@@ -47,6 +47,7 @@ export default function ChatPage() {
           index: selectedOption?.index || selectedIndex,
           namespace: selectedOption?.namespace || '__default__',
           displayName: selectedOption?.label || selectedIndex,
+          description: selectedOption?.description || '',
           format: selectedOption?.format || ''
         })
       })

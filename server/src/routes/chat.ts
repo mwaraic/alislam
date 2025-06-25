@@ -29,7 +29,7 @@ chatRoute.options('/', (c) => {
 chatRoute.post('/', async (c) => {
   try {
     const env = c.get('env') || c.env
-    const { message, index, namespace, displayName, format } = await c.req.json()
+    const { message, index, namespace, displayName, description, format } = await c.req.json()
 
     if (!message || typeof message !== 'string') {
       return c.json({ error: 'Valid message string is required' }, 400)
@@ -45,7 +45,7 @@ chatRoute.post('/', async (c) => {
     }
 
     // Get RAG chain with selected index
-    const ragChain = await chatService.getRAGChain(env, selectedIndex, selectedNamespace, displayName, format)
+    const ragChain = await chatService.getRAGChain(env, selectedIndex, selectedNamespace, displayName, description, format)
 
     // Create a readable stream for streaming response
     const { readable, writable } = new TransformStream()
