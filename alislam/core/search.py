@@ -9,7 +9,7 @@ import os
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 COHERE_API_KEY = os.environ.get('COHERE_API_KEY')
-PINECONE_API_KEY = "pcsk_5yFAkw_PNMTdBRvn529CA3ZR7RYh7KtU58G5VV8xYMFNheuKf4z4YMxcJ8tEuh3RcFcFvf"
+PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
 
 gemini_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
 
