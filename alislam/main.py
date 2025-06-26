@@ -53,6 +53,11 @@ async def process_alislam_query(prompt: str):
         error_message = f"Error processing Al-Islam query: {str(e)}"
         yield StreamingChatResponse(type="error", data={"error": error_message})
 
+@app.get("/")
+async def root():
+    """Root endpoint for health check"""
+    return {"message": "Al-Islam API is running successfully", "status": "healthy"}
+
 @app.post("/alislam")
 async def chat_alislam(request: ChatRequestAlislam):
     """Al-Islam commentary search endpoint with streaming support"""
@@ -76,6 +81,10 @@ async def chat_alislam(request: ChatRequestAlislam):
             "Content-Type": "text/event-stream"
         }
     )
+
+# Vercel serverless function handler
+def handler(request):
+    return app
 
 if __name__ == "__main__":
     import uvicorn
