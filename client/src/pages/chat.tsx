@@ -37,22 +37,41 @@ export default function ChatPage() {
 
     try {
       const selectedOption = indexOptions.find(opt => opt.value === selectedIndex)
-      const response = await fetch(`${API_URL}/alislam`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: question.trim(),
-          /*
-          index: selectedOption?.index || selectedIndex,
-          namespace: selectedOption?.namespace || '__default__',
-          displayName: selectedOption?.label || selectedIndex,
-          description: selectedOption?.description || '',
-          format: selectedOption?.format || ''  
-          */
+      let response
+      
+      if (selectedOption?.index === 'alislam') {
+        response = await fetch(`${API_URL}/alislam`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: question.trim(),
+            /*
+            index: selectedOption?.index || selectedIndex,
+            namespace: selectedOption?.namespace || '__default__',
+            displayName: selectedOption?.label || selectedIndex,
+            description: selectedOption?.description || '',
+            format: selectedOption?.format || ''  
+            */
+          })
         })
-      })
+      } else {
+        response = await fetch(`${API_URL}/api/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: question.trim(),
+            index: selectedOption?.index || selectedIndex,
+            namespace: selectedOption?.namespace || '__default__',
+            displayName: selectedOption?.label || selectedIndex,
+            description: selectedOption?.description || '',
+            format: selectedOption?.format || '' 
+          })
+        })
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
