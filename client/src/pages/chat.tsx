@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react'
 import { flushSync } from 'react-dom'
 import indexOptions from '@/data/books'
 
-const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8787'
+const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000'
 
 export default function ChatPage() {
   const [question, setQuestion] = useState('')
@@ -37,18 +37,20 @@ export default function ChatPage() {
 
     try {
       const selectedOption = indexOptions.find(opt => opt.value === selectedIndex)
-      const response = await fetch(`${API_URL}/api/chat`, {
+      const response = await fetch(`${API_URL}/alislam`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: question.trim(),
+          prompt: question.trim(),
+          /*
           index: selectedOption?.index || selectedIndex,
           namespace: selectedOption?.namespace || '__default__',
           displayName: selectedOption?.label || selectedIndex,
           description: selectedOption?.description || '',
-          format: selectedOption?.format || ''
+          format: selectedOption?.format || ''  
+          */
         })
       })
 
@@ -62,6 +64,7 @@ export default function ChatPage() {
       if (contentType?.includes('application/json')) {
         // Handle error response
         const data = await response.json()
+        console.log(data)
         setAnswer(data.error || 'Sorry, I could not process your request.')
         setStreamingComplete(true)
       } else {

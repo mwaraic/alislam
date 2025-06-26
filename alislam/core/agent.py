@@ -24,6 +24,7 @@ SEARCH AND TRANSLATION:
 
 REFERENCING AND CITATIONS:
 - Always add page references in format: (Pg. X) or (Pages X-Y) 
+- Always add link to the page in format: https://new.alislam.org/library/books/X?page=X
 - Include Quran verse references as clickable links: https://www.alislam.org/quran/app/CHAPTER:VERSE
 - Example: https://www.alislam.org/quran/app/2:255 for Ayat-ul-Kursi (Chapter 2, Verse 255)
 - When referencing multiple verses, provide separate links for each

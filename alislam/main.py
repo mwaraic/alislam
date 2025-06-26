@@ -2,6 +2,7 @@ import asyncio
 import os
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Union
 import json
@@ -12,6 +13,15 @@ class StreamingChatResponse(BaseModel):
     
 # Create FastAPI app with lifespan
 app = FastAPI(title="Al-Islam API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ChatRequestAlislam(BaseModel):
     prompt: Optional[str] = None
@@ -31,9 +41,21 @@ async def process_alislam_query(prompt: str):
         async for chunk in graph.astream(graph_input):
             # Extract the content from the chunk
             if isinstance(chunk, dict):
-                # Handle different chunk formats from langgraph
                 content = ""
-                if "messages" in chunk and len(chunk["messages"]) > 0:
+                
+                # Handle agent responses with messages
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    messages = chunk["agent"]["messages"]
+                    if messages and len(messages) > 0:
+                        last_message = messages[-1]
+                        # Extract content from AIMessage
+                        if hasattr(last_message, 'content'):
+                            content = last_message.content
+                        elif isinstance(last_message, dict) and 'content' in last_message:
+                            content = last_message['content']
+                
+                # Fallback to other chunk formats
+                elif "messages" in chunk and len(chunk["messages"]) > 0:
                     last_message = chunk["messages"][-1]
                     if hasattr(last_message, 'content'):
                         content = last_message.content
@@ -41,10 +63,8 @@ async def process_alislam_query(prompt: str):
                         content = last_message['content']
                 elif "content" in chunk:
                     content = chunk["content"]
-                else:
-                    content = str(chunk)
                 
-                if content:
+                if content and content.strip():
                     yield StreamingChatResponse(type="content", data=content)
         
         yield StreamingChatResponse(type="done", data="")
@@ -53,24 +73,24 @@ async def process_alislam_query(prompt: str):
         error_message = f"Error processing Al-Islam query: {str(e)}"
         yield StreamingChatResponse(type="error", data={"error": error_message})
 
-@app.get("/")
-async def root():
-    """Root endpoint for health check"""
-    return {"message": "Al-Islam API is running successfully", "status": "healthy"}
-
 @app.post("/alislam")
 async def chat_alislam(request: ChatRequestAlislam):
     """Al-Islam commentary search endpoint with streaming support"""
     async def generate_stream():
         try:
             async for chunk in process_alislam_query(request.prompt or ""):
-                yield f"data: {json.dumps(chunk.dict())}\n\n"
+                if chunk.type == "content":
+                    # Send only the raw content without data prefix
+                    yield f"{chunk.data}\n\n"
+                elif chunk.type == "error":
+                    # For errors, send just the error message
+                    error_data = chunk.data
+                    if isinstance(error_data, dict) and 'error' in error_data:
+                        yield f"Error: {error_data['error']}\n\n"
+                    else:
+                        yield f"Error: {str(error_data)}\n\n"
         except Exception as e:
-            error_chunk = StreamingChatResponse(
-                type="error", 
-                data={"error": f"Streaming error: {str(e)}"}
-            )
-            yield f"data: {json.dumps(error_chunk.dict())}\n\n"
+            yield f"Error: {str(e)}\n\n"
     
     return StreamingResponse(
         generate_stream(),
@@ -78,13 +98,9 @@ async def chat_alislam(request: ChatRequestAlislam):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "Content-Type": "text/event-stream"
+            "Content-Type": "text/plain"
         }
     )
-
-# Vercel serverless function handler
-def handler(request):
-    return app
 
 if __name__ == "__main__":
     import uvicorn
