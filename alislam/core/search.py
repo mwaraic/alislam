@@ -156,5 +156,17 @@ def search_commentary(query):
         )
 
         enhanced_results.extend(result['matches'])
+
+    # Format the enhanced results in the desired format
+    formatted_results = []
+    for doc in enhanced_results:
+        content = doc['metadata'].get('text', '')
+        link = doc['metadata'].get('link', '')
+        if link:
+            # Replace 'page=' with 'code=' in the link
+            link = link.replace('page=', 'code=')
+        
+        formatted_content = f"Content:{content} \n\nLink:{link}"
+        formatted_results.append(formatted_content)
     
-    return enhanced_results
+    return formatted_results
