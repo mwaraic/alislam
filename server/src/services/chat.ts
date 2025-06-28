@@ -38,7 +38,7 @@ export class ChatService {
     // Initialize Gemini components
     const llm = new ChatGoogleGenerativeAI({
       apiKey: env.GEMINI_API_KEY,
-      modelName: 'gemini-2.5-pro-preview-06-05',
+      modelName: 'gemini-2.5-flash-preview-05-20',
       temperature: 0.7,
       streaming: true,
     })

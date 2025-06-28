@@ -2,7 +2,6 @@ from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone as pc
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pinecone import Pinecone as pc
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_cohere import CohereRerank
 from core.alibaba import GTEEmbeddidng
 import os
@@ -43,8 +42,6 @@ reranker = CohereRerank(
 model_name_or_path = 'Alibaba-NLP/gte-multilingual-base'
 model = GTEEmbeddidng(model_name_or_path)
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-05-20")
-
 def search_commentary(query):
     """
     Search the commentary for the given query.
@@ -58,7 +55,7 @@ def search_commentary(query):
     dense_results = index.query(
         namespace="quran-english-five-volume-1",
         vector=gemini_embeddings.embed_query(query), 
-        top_k=40,
+        top_k=100,
         include_metadata=True,
         include_values=False
     )
@@ -80,7 +77,7 @@ def search_commentary(query):
 
     # Perform sparse query
     sparse_results = sparse_index.query(
-        top_k=40,
+        top_k=100,
         sparse_vector={
             "indices": q_indices,
             "values": q_values
@@ -131,7 +128,7 @@ def search_commentary(query):
 
     merged_results = merge_chunks(dense_results, sparse_results)
 
-    reranked_results = reranker.rerank(merged_results, query, top_n=5)
+    reranked_results = reranker.rerank(merged_results, query, top_n=25)
 
     final_results = []
 

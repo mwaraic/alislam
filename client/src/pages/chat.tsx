@@ -37,6 +37,7 @@ export default function ChatPage() {
 
     try {
       const selectedOption = indexOptions.find(opt => opt.value === selectedIndex)
+
       let response
       
       if (selectedOption?.index === 'alislam') {
@@ -57,13 +58,13 @@ export default function ChatPage() {
           })
         })
       } else {
-        response = await fetch(`${API_URL}/api/chat`, {
+        response = await fetch(`http://localhost:8787/api/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            prompt: question.trim(),
+            message: question.trim(),
             index: selectedOption?.index || selectedIndex,
             namespace: selectedOption?.namespace || '__default__',
             displayName: selectedOption?.label || selectedIndex,

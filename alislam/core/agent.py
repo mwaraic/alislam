@@ -2,7 +2,7 @@ from langgraph.prebuilt import create_react_agent
 from core.search import search_commentary
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-preview-06-05")
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-05-20")
 
 graph = create_react_agent(
     llm,
@@ -69,5 +69,6 @@ SEARCH STRATEGY:
 - Always perform multiple searches with different terms
 - Don't stop after first search - try at least 2-3 variations
 - If searching for Arabic concepts, include both Arabic and English terms
-- Cross-reference information when multiple sources are mentioned"""
+- Cross-reference information when multiple sources are mentioned
+- Verify verse numbers before creating links"""
 )
