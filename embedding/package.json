@@ -1,0 +1,30 @@
+{
+  "name": "embedding-service",
+  "description": "Python FastAPI embedding service container",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "wrangler": "4.21.x"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.0.13",
+    "hono": "4.8.2"
+  },
+  "cloudflare": {
+    "label": "Embedding Service Container",
+    "products": [
+      "Workers",
+      "Durable Objects",
+      "Containers"
+    ],
+    "categories": ["AI/ML"],
+    "docs_url": "https://developers.cloudflare.com/containers/"
+  }
+} 

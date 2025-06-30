@@ -5,7 +5,6 @@ const indexOptions = [
    /* { value: 'seerat-ul-mahdi', index: 'seerat-ul-mahdi', namespace: '__default__', label: 'Seerat-ul-Mahdi', description: 'Biographical accounts and historical records.', 'format': 'Seerat ul Mahdi, Vol. X, Part X, Pg. X, Narration X' }, */
    /* { value: 'pocket-book', index: 'pocket-book', namespace: '__default__', label: 'Pocket Book', description: 'A collection of practical Islamic guidance and advice.', format: 'Ahmadiyya Pocket Book, Pg. X' }, */
     { value: 'fiqh-ul-ahmadiyya', index: 'fiqh', namespace: 'fiqh-ul-ahmadiyya', label: 'Fiqh ul Ahmadiyya', description: 'A compilation of Islamic jurisprudential rulings as understood and practiced by the Ahmadiyya Muslim Community.', format: 'Fiqh ul Ahmadiyya, Vol. [Volume Number], Part [Part Number], Pg. [Page Number]' },
-    { value: 'alislam', index: 'alislam', namespace: '__default__', label: 'Al Islam', description: 'A collection of books and articles on Islam and the Ahmadiyya Muslim Community.', format: 'Al Islam, Vol. [Volume Number], Pg. [Page Number]' }
 ]
 
 export default indexOptions;

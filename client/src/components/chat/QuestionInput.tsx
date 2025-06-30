@@ -6,6 +6,8 @@ interface QuestionInputProps {
   question: string
   setQuestion: (question: string) => void
   isLoading: boolean
+  selectedCategory: string
+  setSelectedCategory: (category: string) => void
   selectedIndex: string
   setSelectedIndex: (index: string) => void
   handleSubmit: () => void
@@ -16,6 +18,8 @@ export function QuestionInput({
   question,
   setQuestion,
   isLoading,
+  selectedCategory,
+  setSelectedCategory,
   selectedIndex,
   setSelectedIndex,
   handleSubmit,
@@ -56,6 +60,20 @@ export function QuestionInput({
             <Send className="h-5 w-5" />
           )}
         </button>
+      </div>
+
+      {/* Category Selector */}
+      <div className="flex justify-center mb-4">
+        <select
+          id="category-selector"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          disabled={isLoading}
+          className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-center"
+        >
+          <option value="tafseer">Holy Quran</option>
+          <option value="books">Ahmadiyya Books</option>
+        </select>
       </div>
 
       {/* Index Selector */}

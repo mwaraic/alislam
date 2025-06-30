@@ -13,6 +13,12 @@ const templateQuestions = {
   ],
   'fiqh-ul-masih': [
     'حضرت مسیح موعود علیہ الصلوٰۃ والسلام نے بدعات (نئی رسومات) کے خلاف کون سا موقف اختیار فرمایا؟'
+  ],
+  'tafseer-hazrat-masih-maud': [
+    'What is commentary of 5:106?',
+  ],
+  'five-volume-commentary': [
+    'کیا نسیان اور خطا معافی کے قابل ہیں؟',
   ]
 }
 

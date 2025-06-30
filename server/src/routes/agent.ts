@@ -1,23 +1,23 @@
 import { Hono } from 'hono'
-import { ChatService, ChatBindings } from '../services/chat'
+import { AgentService, AgentBindings } from '../services/agent'
 
 type Variables = {
-  env?: ChatBindings
+  env?: AgentBindings
 }
 
-export const chatRoute = new Hono<{ Bindings: ChatBindings; Variables: Variables }>()
+export const agentRoute = new Hono<{ Bindings: AgentBindings; Variables: Variables }>()
 
 // Debug middleware to log all requests
-chatRoute.use('*', async (c, next) => {
+agentRoute.use('*', async (c, next) => {
   await next()
 })
 
 // Handle OPTIONS preflight requests
-chatRoute.options('/', (c) => {
+agentRoute.options('/', (c) => {
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': 'http://localhost:5173',
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
@@ -25,27 +25,22 @@ chatRoute.options('/', (c) => {
   })
 })
 
-// POST /api/chat - Handle chat messages with streaming
-chatRoute.post('/', async (c) => {
+// POST /api/agent - Handle Al-Islam commentary queries with streaming
+agentRoute.post('/', async (c) => {
   try {
     const env = c.get('env') || c.env
-    const { message, index, namespace, displayName, description, format } = await c.req.json()
+    const { prompt, namespace } = await c.req.json()
 
-    if (!message || typeof message !== 'string') {
-      return c.json({ error: 'Valid message string is required' }, 400)
+    if (!prompt || typeof prompt !== 'string') {
+      return c.json({ error: 'Valid prompt string is required' }, 400)
     }
 
-    const chatService = ChatService.getInstance()
-    const selectedIndex = chatService.validateIndex(index)
-    const selectedNamespace = namespace || '__default__'
+    const agentService = AgentService.getInstance()
 
     // Validate environment variables
-    if (!chatService.validateEnvironment(env)) {
+    if (!agentService.validateEnvironment(env)) {
       return c.json({ error: 'Missing required environment variables' }, 500)
     }
-
-    // Get RAG chain with selected index
-    const ragChain = await chatService.getRAGChain(env, selectedIndex, selectedNamespace, displayName, description, format)
 
     // Create a readable stream for streaming response
     const { readable, writable } = new TransformStream()
@@ -54,42 +49,23 @@ chatRoute.post('/', async (c) => {
 
     // Start the streaming process
     ;(async () => {
-      try {        
-        // Use streamEvents to get token-level streaming from the LLM
-        const eventStream = ragChain.streamEvents({
-          question: String(message).trim()
-        }, { version: "v1" })
-
-        console.log('eventStream', eventStream)
-
-        let chunkCount = 0
-        let totalChars = 0
+      try {
+        // Use the agent service to process the query with streaming
+        const queryGenerator = agentService.processAlislamQuery(prompt.trim(), namespace, env)
         
-        for await (const event of eventStream) {
-          // Look for LLM streaming events which contain the actual content
-          if (event.event === "on_llm_stream") {
-            const chunk = event.data?.chunk?.content || event.data?.chunk?.text || event.data?.chunk
+        for await (const chunk of queryGenerator) {
+          if (chunk && typeof chunk === 'string' && chunk.length > 0) {
+            // Write chunk immediately
+            const encodedChunk = encoder.encode(chunk)
+            await writer.write(encodedChunk)
             
-            if (chunk && typeof chunk === 'string' && chunk.length > 0) {
-              chunkCount++
-              totalChars += chunk.length
-                            
-              // Prevent infinite streaming (safety measure)
-              if (chunkCount > 200) {
-                break
-              }
-              
-              // Write chunk immediately
-              const encodedChunk = encoder.encode(chunk)
-              await writer.write(encodedChunk)
-              
-              // Add a very small delay to ensure smooth delivery
-              await new Promise(resolve => setTimeout(resolve, 1))
-            }
+            // Add a very small delay to ensure smooth delivery
+            await new Promise(resolve => setTimeout(resolve, 1))
           }
         }
         
       } catch (error) {
+        console.error('Agent streaming error:', error)
         const errorMessage = 'Sorry, there was an error processing your request. Please try again.'
         await writer.write(encoder.encode(errorMessage))
       } finally {
@@ -120,7 +96,7 @@ chatRoute.post('/', async (c) => {
     })
 
   } catch (error) {
-    console.error('Chat error:', error)
+    console.error('Agent error:', error)
     
     // Return different error messages based on error type
     if (error instanceof Error) {
@@ -130,8 +106,8 @@ chatRoute.post('/', async (c) => {
       if (error.message.includes('Gemini') || error.message.includes('Google')) {
         return c.json({ error: 'AI service unavailable. Please try again.' }, 500)
       }
-      if (error.message.includes('text.replace')) {
-        return c.json({ error: 'Input processing error. Please try rephrasing your question.' }, 500)
+      if (error.message.includes('Services not initialized')) {
+        return c.json({ error: 'Service initialization error. Please try again.' }, 500)
       }
     }
     
