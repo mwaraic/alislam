@@ -4,9 +4,10 @@ import { WelcomeMessage } from '@/components/chat/WelcomeMessage'
 import { QuestionTemplates } from '@/components/chat/QuestionTemplates'
 import { useState, useMemo } from 'react'
 import { flushSync } from 'react-dom'
-import indexOptions from '@/data/books'
+import booksOptions from '@/data/books'
+import tafseerOptions from '@/data/tafseer'
 
-const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000'
+const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8787'
 
 export default function ChatPage() {
   const [question, setQuestion] = useState('')
@@ -14,7 +15,25 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingComplete, setStreamingComplete] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState('ruhani-khazain')
+  const [selectedCategory, setSelectedCategory] = useState('tafseer')
+  const [selectedIndex, setSelectedIndex] = useState('tafseer-hazrat-masih-maud')
+  
+  // Timer state variables
+  const [responseDuration, setResponseDuration] = useState<number | null>(null)
+
+  // Get current index options based on selected category
+  const currentIndexOptions = useMemo(() => {
+    return selectedCategory === 'books' ? booksOptions : tafseerOptions
+  }, [selectedCategory])
+
+  // Reset selectedIndex when category changes
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    const newOptions = category === 'books' ? booksOptions : tafseerOptions
+    if (newOptions.length > 0) {
+      setSelectedIndex(newOptions[0].value)
+    }
+  }
 
   const processedAnswer = useMemo(() => {
     if (!answer) return ''
@@ -30,35 +49,35 @@ export default function ChatPage() {
   const handleSubmit = async () => {
     if (!question.trim() || isLoading) return
 
+    // Start timer
+    const startTime = Date.now()
+    setResponseDuration(null)
+
     setIsLoading(true)
     setIsStreaming(true)
     setStreamingComplete(false)
     setAnswer('') // Clear previous answer
 
     try {
-      const selectedOption = indexOptions.find(opt => opt.value === selectedIndex)
+      const selectedOption = currentIndexOptions.find(opt => opt.value === selectedIndex)
 
       let response
       
-      if (selectedOption?.index === 'alislam') {
-        response = await fetch(`${API_URL}/alislam`, {
+      // Use alislam API flow for tafseer category or when index is 'alislam'
+      if (selectedCategory === 'tafseer' || selectedOption?.index === 'alislam') {
+        console.log('selectedOption', selectedOption)
+        response = await fetch(`${API_URL}/api/agent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             prompt: question.trim(),
-            /*
-            index: selectedOption?.index || selectedIndex,
-            namespace: selectedOption?.namespace || '__default__',
-            displayName: selectedOption?.label || selectedIndex,
-            description: selectedOption?.description || '',
-            format: selectedOption?.format || ''  
-            */
+            namespace: selectedOption?.namespace || '__default__'
           })
         })
       } else {
-        response = await fetch(`http://localhost:8787/api/chat`, {
+        response = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -87,6 +106,10 @@ export default function ChatPage() {
         console.log(data)
         setAnswer(data.error || 'Sorry, I could not process your request.')
         setStreamingComplete(true)
+        
+        // End timer for error response
+        const endTime = Date.now()
+        setResponseDuration(endTime - startTime)
       } else {
         // Handle streaming response
         const reader = response.body?.getReader()
@@ -104,6 +127,10 @@ export default function ChatPage() {
             const { done, value } = await reader.read()
                         
             if (done) {
+              // End timer when streaming is complete
+              const endTime = Date.now()
+              setResponseDuration(endTime - startTime)
+              
               // Mark streaming as complete and trigger final render
               flushSync(() => {
                 setIsStreaming(false)
@@ -133,6 +160,10 @@ export default function ChatPage() {
         }
       }
     } catch (error) {
+      // End timer for error case
+      const endTime = Date.now()
+      setResponseDuration(endTime - startTime)
+      
       flushSync(() => {
         setAnswer('Sorry, there was an error processing your request. Please try again.')
         setIsStreaming(false)
@@ -153,6 +184,8 @@ export default function ChatPage() {
     setQuestion('')
     setAnswer('')
     setStreamingComplete(false)
+    // Reset timer state
+    setResponseDuration(null)
   }
 
   return (
@@ -163,7 +196,7 @@ export default function ChatPage() {
         <QuestionTemplates
           setQuestion={setQuestion}
           setSelectedIndex={setSelectedIndex}
-          indexOptions={indexOptions}
+          indexOptions={currentIndexOptions}
         />
       }
 
@@ -171,10 +204,12 @@ export default function ChatPage() {
           question={question}
           setQuestion={setQuestion}
           isLoading={isLoading}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={handleCategoryChange}
           selectedIndex={selectedIndex}
           setSelectedIndex={setSelectedIndex}
           handleSubmit={handleSubmit}
-          indexOptions={indexOptions}
+          indexOptions={currentIndexOptions}
         />
 
         <AnswerDisplay
@@ -183,9 +218,10 @@ export default function ChatPage() {
           isStreaming={isStreaming}
           streamingComplete={streamingComplete}
           selectedIndex={selectedIndex}
-          indexOptions={indexOptions}
+          indexOptions={currentIndexOptions}
           handleNewQuestion={handleNewQuestion}
           processedAnswer={processedAnswer}
+          responseDuration={responseDuration}
         />
 
       </div>

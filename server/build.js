@@ -4,25 +4,25 @@ async function build() {
   await esbuild.build({
     entryPoints: ['src/index.ts'],
     bundle: true,
-    platform: 'browser',
+    platform: 'node',
     format: 'esm',
     outdir: 'dist',
     external: [
-      // Keep external dependencies that are available in Workers
+      // Keep external dependencies
       'hono',
       '@langchain/core',
       '@langchain/google-genai',
       '@langchain/pinecone',
-      '@pinecone-database/pinecone'
+      '@pinecone-database/pinecone',
+      '@langchain/langgraph',
+      '@langchain/cohere'
     ],
     minify: true,
     sourcemap: true,
     target: 'es2022',
     define: {
       'process.env.NODE_ENV': '"production"'
-    },
-    // Workers-specific configuration
-    conditions: ['worker', 'browser']
+    }
   });
 }
 

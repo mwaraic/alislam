@@ -1,11 +1,13 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { chatRoute } from './routes/chat'
+import { agentRoute } from './routes/agent'
 
 type Bindings = {
   GEMINI_API_KEY: string
   PINECONE_API_KEY: string
   COHERE_API_KEY: string
+  PINECONE_API_KEY_2: string
   ASSETS?: any
 }
 
@@ -32,6 +34,7 @@ app.use('*', async (c, next) => {
     COHERE_API_KEY: c.env.COHERE_API_KEY || process.env.COHERE_API_KEY,
     GEMINI_API_KEY: c.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
     PINECONE_API_KEY: c.env.PINECONE_API_KEY || process.env.PINECONE_API_KEY,
+    PINECONE_API_KEY_2: c.env.PINECONE_API_KEY_2 || process.env.PINECONE_API_KEY_2,
   } as Bindings
 
   c.set('env', env)
@@ -41,6 +44,7 @@ app.use('*', async (c, next) => {
 
 // API routes
 app.route('/api/chat', chatRoute)
+app.route('/api/agent', agentRoute)
 
 // Health check endpoint
 app.get('/api/health', (c) => {
@@ -79,6 +83,7 @@ app.get('*', async (c) => {
     message: 'Alislam Q&A API Server',
     endpoints: {
       chat: '/api/chat',
+      agent: '/api/agent',
       health: '/api/health'
     }
   })

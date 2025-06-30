@@ -16,6 +16,7 @@ interface AnswerDisplayProps {
   indexOptions: Array<{ value: string; label: string }>
   handleNewQuestion: () => void
   processedAnswer: string
+  responseDuration?: number | null
 }
 
 // Utility to detect RTL text, privileging English if present
@@ -53,7 +54,8 @@ export function AnswerDisplay({
   selectedIndex,
   indexOptions,
   handleNewQuestion,
-  processedAnswer
+  processedAnswer,
+  responseDuration
 }: AnswerDisplayProps) {
   if (!answer && !isLoading) return null
 
@@ -92,6 +94,15 @@ export function AnswerDisplay({
   // Convert URLs in answer text for copying
   const answerForCopy = convertCodeToPageInText(answer);
 
+  // Format response duration
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) {
+      return `${ms}ms`
+    } else {
+      return `${(ms / 1000).toFixed(1)}s`
+    }
+  }
+
   return (
     <div className="p-6 border border-border rounded-lg bg-card/50 relative">
       {/* WebView Modal */}
@@ -126,6 +137,11 @@ export function AnswerDisplay({
           <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
             {indexOptions.find(opt => opt.value === selectedIndex)?.label}
           </span>
+          {responseDuration && (
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+              {formatDuration(responseDuration)}
+            </span>
+          )}
         </div>
         {answer && !isLoading && (
           <div className="flex items-center gap-2">

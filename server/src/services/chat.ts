@@ -11,7 +11,7 @@ import { BaseRetrieverInterface } from '@langchain/core/retrievers'
 
 export type ChatBindings = {
   GEMINI_API_KEY: string
-  PINECONE_API_KEY: string
+  PINECONE_API_KEY_2: string
   COHERE_API_KEY: string
 }
 
@@ -49,7 +49,7 @@ export class ChatService {
     })
 
     // Initialize Pinecone
-    const pinecone = this.initializePinecone(env.PINECONE_API_KEY)
+    const pinecone = this.initializePinecone(env.PINECONE_API_KEY_2)
     const index = pinecone.Index(indexName)
 
     // Create vector store with namespace
@@ -270,6 +270,6 @@ Answer:`)
   }
 
   public validateEnvironment(env: ChatBindings): boolean {
-    return !!(env.GEMINI_API_KEY && env.PINECONE_API_KEY)
+    return !!(env.GEMINI_API_KEY && env.PINECONE_API_KEY_2)
   }
 } 
