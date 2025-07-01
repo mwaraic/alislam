@@ -56,4 +56,60 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Enhanced styles for Arabic and mixed content */
+@layer components {
+  /* Better Arabic text rendering */
+  .arabic-text {
+    font-family: 'Amiri', 'Traditional Arabic', 'Arabic Typesetting', serif;
+    font-feature-settings: 'liga' 1, 'dlig' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
+    direction: rtl;
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* Mixed content containers */
+  .mixed-content {
+    unicode-bidi: plaintext;
+  }
+
+  /* Auto-direction for mixed RTL/LTR content */
+  .auto-direction {
+    direction: auto;
+    text-align: start;
+  }
+
+  /* Improved spacing for Arabic citations */
+  .citation-link {
+    margin: 0 0.25rem;
+    white-space: nowrap;
+  }
+
+  /* Better table alignment for mixed content */
+  .mixed-table th {
+    text-align: start;
+    unicode-bidi: plaintext;
+  }
+
+  .mixed-table td {
+    text-align: start;
+    unicode-bidi: plaintext;
+  }
+
+  /* Improved blockquote styling for Arabic */
+  .arabic-quote {
+    border-right: 4px solid var(--border);
+    border-left: none;
+    padding-right: 1rem;
+    padding-left: 0;
+    direction: rtl;
+  }
+
+  /* Better line height for mixed content */
+  .mixed-text {
+    line-height: 1.7;
+    word-spacing: 0.1em;
+  }
 } 

@@ -104,14 +104,25 @@ export class AgentService {
                       // Check for tool calls in the message
                       if (message && message.tool_calls && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
                         for (const toolCall of message.tool_calls) {
-                          yield `🔧 **Tool Call**: ${toolCall.name}\n📝 **Arguments**: ${JSON.stringify(toolCall.args, null, 2)}\n\n`
+                          // Emit a structured tool call format that's easier to parse
+                          // Use single-line JSON to avoid parsing issues
+                          const toolCallMessage = `🔧 **Tool Call**: ${toolCall.name}\n📝 **Arguments**: ${JSON.stringify(toolCall.args)}\n\n`
+                          yield toolCallMessage
                         }
                       }
                       
                       // Check if this is an AI message with content
                       if (message && typeof message.content === 'string' && message.content.trim()) {
-                        // Yield the actual content
-                        yield message.content
+                        // Check if this message has tool calls - if not, it's likely the final answer
+                        const hasToolCalls = message.tool_calls && Array.isArray(message.tool_calls) && message.tool_calls.length > 0
+                        
+                        if (!hasToolCalls) {
+                          // This is the final answer - mark it with a special prefix
+                          yield `📝 **Final Answer**:\n${message.content}`
+                        } else {
+                          // This is intermediate content with tool calls - yield as is
+                          yield message.content
+                        }
                       }
                     }
                   }
