@@ -18,28 +18,24 @@ interface ThinkingDisplayProps {
 
 export function ThinkingDisplay({ toolCalls, isVisible, isLoading = false, shouldCollapse = false, selectedCategory = 'tafseer', selectedBookName }: ThinkingDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
 
   // Auto-expand when tool calls are first detected or when loading for books (only once)
   useEffect(() => {
-    if ((toolCalls.length > 0 || (selectedCategory === 'books' && isLoading)) && !hasAutoExpanded) {
+    if ((toolCalls.length > 0 || (selectedCategory === 'books' && isLoading))) {
       setIsExpanded(true)
-      setHasAutoExpanded(true)
     }
-  }, [toolCalls.length, selectedCategory, isLoading, hasAutoExpanded])
+  }, [toolCalls.length, selectedCategory, isLoading])
 
   // Auto-collapse when answer starts streaming
   useEffect(() => {
     if (shouldCollapse && isExpanded) {
       setIsExpanded(false)
-      setHasAutoExpanded(false)
     }
   }, [shouldCollapse, isExpanded])
 
   // Reset auto-expand flag when not visible
   useEffect(() => {
     if (!isVisible) {
-      setHasAutoExpanded(false)
       setIsExpanded(false)
     }
   }, [isVisible])

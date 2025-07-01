@@ -36,6 +36,31 @@ export function QuestionInput({
     <>
     <div className="p-6 border border-border rounded-lg bg-card/50">
 
+      {/* Category Tabs */}
+      <div className="flex justify-start mb-4 gap-2">
+        {[
+          { value: 'tafseer', label: 'Holy Quran' },
+          { value: 'books', label: 'Books' }
+        ].map((cat) => (
+          <button
+            key={cat.value}
+            type="button"
+            onClick={() => setSelectedCategory(cat.value)}
+            disabled={isLoading}
+            className={cn(
+              'px-6 py-2 rounded-t-md border-b-2 text-sm font-medium transition-colors focus-visible:outline-none',
+              selectedCategory === cat.value
+                ? 'border-primary text-primary bg-background'
+                : 'border-transparent text-muted-foreground bg-muted/30 hover:bg-muted',
+              isLoading && 'opacity-50 cursor-not-allowed'
+            )}
+            style={{ minWidth: 120 }}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex space-x-3 mb-4">
         <textarea
           value={question}
@@ -60,20 +85,6 @@ export function QuestionInput({
             <Send className="h-5 w-5" />
           )}
         </button>
-      </div>
-
-      {/* Category Selector */}
-      <div className="flex justify-center mb-4">
-        <select
-          id="category-selector"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          disabled={isLoading}
-          className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-center"
-        >
-          <option value="tafseer">Holy Quran</option>
-          <option value="books">Ahmadiyya Books</option>
-        </select>
       </div>
 
       {/* Index Selector */}

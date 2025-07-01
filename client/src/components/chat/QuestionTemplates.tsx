@@ -15,10 +15,10 @@ const templateQuestions = {
     'حضرت مسیح موعود علیہ الصلوٰۃ والسلام نے بدعات (نئی رسومات) کے خلاف کون سا موقف اختیار فرمایا؟'
   ],
   'tafseer-hazrat-masih-maud': [
-    'What is commentary of 5:106?',
+    'What is the meaning of word Tawaffa?',
   ],
   'five-volume-commentary': [
-    'کیا نسیان اور خطا معافی کے قابل ہیں؟',
+    'Did Napolean pass the Red Sea where Prophet Moses A.S did?',
   ]
 }
 
