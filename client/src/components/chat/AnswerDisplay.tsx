@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { CodeBlock } from './CodeBlock'
 import { LinkRenderer } from './LinkRenderer'
-import { TableRenderer } from './TableRenderer'
 import { CopyButton } from './CopyButton'
 
 interface AnswerDisplayProps {
@@ -19,26 +18,43 @@ interface AnswerDisplayProps {
   responseDuration?: number | null
 }
 
-// Utility to detect RTL text, privileging English if present
-function isRTL(text: string) {
-  // Count RTL and LTR (Latin) characters
-  const rtlMatch = text.match(/[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/g) || [];
-  const ltrMatch = text.match(/[A-Za-z]/g) || [];
-  // Privilege English: Only use RTL if there are more RTL than LTR chars
-  return rtlMatch.length > ltrMatch.length;
-}
-
-// Utility to get the first significant text (strip markdown, get first 200 chars)
-function getFirstSignificantText(text: string) {
-  return text
+// Enhanced function to detect if a text block is primarily RTL
+function isTextBlockRTL(text: string) {
+  // Remove markdown and formatting
+  const cleanText = text
     .replace(/`[^`]*`/g, '') // inline code
     .replace(/!\[[^\]]*\]\([^\)]*\)/g, '') // images
     .replace(/\[[^\]]*\]\([^\)]*\)/g, '') // links
     .replace(/<[^>]+>/g, '') // HTML tags
     .replace(/[*_~#>-]/g, '') // markdown formatting
-    .replace(/\s+/g, ' ') // collapse whitespace
-    .trim()
-    .slice(0, 200);
+    .trim();
+  
+  const rtlMatch = cleanText.match(/[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/g) || [];
+  const ltrMatch = cleanText.match(/[A-Za-z]/g) || [];
+  
+  // Return RTL if Arabic characters are present and dominant
+  return rtlMatch.length > 0 && rtlMatch.length >= ltrMatch.length;
+}
+
+// Component to handle mixed RTL/LTR content
+function MixedDirectionText({ children }: { children: React.ReactNode }) {
+  if (typeof children === 'string') {
+    const isRtl = isTextBlockRTL(children);
+    return (
+      <span 
+        dir={isRtl ? 'rtl' : 'ltr'} 
+        className={`mixed-text auto-direction ${isRtl ? 'arabic-text' : ''}`}
+        style={{ 
+          textAlign: isRtl ? 'right' : 'left',
+          display: 'block',
+          width: '100%'
+        }}
+      >
+        {children}
+      </span>
+    );
+  }
+  return <>{children}</>;
 }
 
 // Convert code= parameter to page= parameter in URLs within text
@@ -86,11 +102,6 @@ export function AnswerDisplay({
     };
   }, [webViewUrl]);
 
-  // Use only the first significant text for directionality
-  const firstText = getFirstSignificantText(answer);
-  const dir = isRTL(firstText) ? 'rtl' : 'ltr';
-  const textAlign = isRTL(firstText) ? 'right' : 'left';
-  
   // Convert URLs in answer text for copying
   const answerForCopy = convertCodeToPageInText(answer);
 
@@ -165,19 +176,25 @@ export function AnswerDisplay({
           <span>Generating response...</span>
         </div>
       ) : isStreaming ? (
-        <div className="prose prose-sm max-w-none text-foreground" dir={dir} style={{ textAlign }}>
+        <div className="prose prose-sm max-w-none text-foreground" dir="auto">
           <div className="whitespace-pre-wrap text-sm leading-relaxed font-sans" style={{ wordBreak: 'break-word' }}>
             {answer}
           </div>
         </div>
       ) : streamingComplete ? (
-        <div className="prose prose-sm max-w-none text-foreground" dir={dir} style={{ textAlign }}>
+        <div className="prose prose-sm max-w-none text-foreground" dir="auto">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               code: CodeBlock as any,
               a: (props: any) => <LinkRenderer {...props} onOpenWebView={handleOpenWebView} />,
-              table: TableRenderer as any,
+              table: ({ children }: { children?: React.ReactNode }) => (
+                <div className="mixed-table">
+                  <table className="w-full border-collapse border border-border">
+                    {children}
+                  </table>
+                </div>
+              ),
               thead: ({ children }: { children?: React.ReactNode }) => (
                 <thead className="bg-muted">
                   {children}
@@ -193,54 +210,60 @@ export function AnswerDisplay({
                   {children}
                 </tr>
               ),
-              th: ({ children }: { children?: React.ReactNode }) => (
-                <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
-                  {children}
-                </th>
-              ),
+              th: ({ children }: { children?: React.ReactNode }) => {
+                const isRtl = typeof children === 'string' ? isTextBlockRTL(children) : false;
+                return (
+                  <th className={`px-4 py-3 text-xs font-semibold text-foreground uppercase tracking-wider ${isRtl ? 'text-right' : 'text-left'}`}>
+                    <MixedDirectionText>{children}</MixedDirectionText>
+                  </th>
+                );
+              },
               td: ({ children }: { children?: React.ReactNode }) => (
                 <td className="px-4 py-3 text-sm text-foreground">
-                  {children}
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </td>
               ),
-              blockquote: ({ children }: { children?: React.ReactNode }) => (
-                <blockquote className="border-l-4 border-border pl-4 italic text-muted-foreground my-3">
-                  {children}
-                </blockquote>
-              ),
+              blockquote: ({ children }: { children?: React.ReactNode }) => {
+                const isRtl = typeof children === 'string' ? isTextBlockRTL(children as string) : false;
+                return (
+                  <blockquote className={`${isRtl ? 'arabic-quote' : 'border-l-4 border-border pl-4'} italic text-muted-foreground my-3`} dir="auto">
+                    <MixedDirectionText>{children}</MixedDirectionText>
+                  </blockquote>
+                );
+              },
               ul: ({ children }: { children?: React.ReactNode }) => (
-                <ul className="list-disc list-outside ml-6 space-y-1 my-3">
+                <ul className="list-disc list-outside ml-6 space-y-1 my-3" dir="auto">
                   {children}
                 </ul>
               ),
               ol: ({ children }: { children?: React.ReactNode }) => (
-                <ol className="list-decimal list-outside ml-6 space-y-1 my-3">
+                <ol className="list-decimal list-outside ml-6 space-y-1 my-3" dir="auto">
                   {children}
                 </ol>
               ),
               li: ({ children }: { children?: React.ReactNode }) => (
                 <li className="break-words">
-                  {children}
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </li>
               ),
               p: ({ children }: { children?: React.ReactNode }) => (
-                <p className="mb-3 last:mb-0 break-words leading-relaxed">
-                  {children}
+                <p className="mb-3 last:mb-0 break-words leading-relaxed" dir="auto">
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </p>
               ),
               h1: ({ children }: { children?: React.ReactNode }) => (
-                <h1 className="text-xl font-bold mb-3 mt-4 first:mt-0">
-                  {children}
+                <h1 className="text-xl font-bold mb-3 mt-4 first:mt-0" dir="auto">
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </h1>
               ),
               h2: ({ children }: { children?: React.ReactNode }) => (
-                <h2 className="text-lg font-bold mb-3 mt-4 first:mt-0">
-                  {children}
+                <h2 className="text-lg font-bold mb-3 mt-4 first:mt-0" dir="auto">
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </h2>
               ),
               h3: ({ children }: { children?: React.ReactNode }) => (
-                <h3 className="text-base font-bold mb-2 mt-3 first:mt-0">
-                  {children}
+                <h3 className="text-base font-bold mb-2 mt-3 first:mt-0" dir="auto">
+                  <MixedDirectionText>{children}</MixedDirectionText>
                 </h3>
               ),
               hr: () => (
@@ -252,9 +275,9 @@ export function AnswerDisplay({
           </ReactMarkdown>
         </div>
       ) :
-        <div className="prose prose-sm max-w-none text-foreground" dir={dir} style={{ textAlign }}>
+        <div className="prose prose-sm max-w-none text-foreground" dir="auto">
           <div className="whitespace-pre-wrap text-sm leading-relaxed">
-            {answer}
+            <MixedDirectionText>{answer}</MixedDirectionText>
           </div>
         </div>
       }

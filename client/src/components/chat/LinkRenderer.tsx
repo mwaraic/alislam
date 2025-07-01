@@ -84,7 +84,7 @@ export function LinkRenderer({ href, children, onOpenWebView }: LinkRendererProp
             onOpenWebView(finalHref)
           }
         }}
-        className="inline-flex items-center text-primary hover:text-primary/80 transition-colors cursor-pointer"
+        className="inline-flex items-center text-primary hover:text-primary/80 transition-colors cursor-pointer citation-link"
         title={`Reference: ${finalHref}`}
       >
         <div className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/20 transition-colors">

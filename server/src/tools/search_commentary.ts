@@ -49,29 +49,62 @@ export class SearchCommentaryTool {
   }
 
   private async getSparseEmbedding(query: string): Promise<SparseEmbeddingResponse> {
-    try {
-      const response = await fetch('https://embedding-service.tickrbot.workers.dev/embedding', {
-        method: 'POST',
-        body: JSON.stringify({ query }),
-        headers: {
-          'Content-Type': 'application/json'
+    const maxRetries = 3
+    const baseDelay = 1000 // 1 second
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch('https://embedding-service.tickrbot.workers.dev/embedding', {
+          method: 'POST',
+          body: JSON.stringify({ query }),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        // If we get a 500 error and haven't exceeded max retries, retry with exponential backoff
+        if (response.status === 500 && attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt)
+          console.warn(`Sparse embedding service returned 500, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
         }
-      })
 
-      const data = await response.json() as { q_indices?: number[], q_values?: number[] }
+        // If response is not ok and it's not a 500 we want to retry, throw error
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
 
-      return {
-        q_indices: data?.q_indices || [],
-        q_values: data?.q_values || [],
-        query: query
+        const data = await response.json() as { q_indices?: number[], q_values?: number[] }
+
+        return {
+          q_indices: data?.q_indices || [],
+          q_values: data?.q_values || [],
+          query: query
+        }
+      } catch (error) {
+        // If this is the last attempt or it's not a network/500 error, give up
+        if (attempt === maxRetries) {
+          console.warn('Sparse embedding service unavailable after retries:', error)
+          return {
+            q_indices: [],
+            q_values: [],
+            query: query
+          }
+        }
+        
+        // For other errors (network issues, etc.), retry with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt)
+        console.warn(`Sparse embedding request failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1}):`, error)
+        await new Promise(resolve => setTimeout(resolve, delay))
       }
-    } catch (error) {
-      console.warn('Sparse embedding service unavailable:', error)
-      return {
-        q_indices: [],
-        q_values: [],
-        query: query
-      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    return {
+      q_indices: [],
+      q_values: [],
+      query: query
     }
   }
 
@@ -228,7 +261,7 @@ export class SearchCommentaryTool {
         return 'No valid commentary content found for reranking.'
       }
 
-      const rerankedResults = await this.reranker!.rerank(documentsForReranking, query, { topN: 25 })
+      const rerankedResults = await this.reranker!.rerank(documentsForReranking, query, { topN: 5 })
       
       // Map reranked indices back to original results
       const rerankedMergedResults = rerankedResults.map(r => mergedResults[r.index]).filter(Boolean)
