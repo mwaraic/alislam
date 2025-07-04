@@ -140,152 +140,108 @@ export default function ChatPage() {
         let accumulatedThinking = ''
         let chunkNumber = 0
         let hasStoppedProcessing = false
+        let chunkBuffer = '' // Buffer to accumulate partial chunks
         
         try {
           while (true) {
             const { done, value } = await reader.read()
                         
             if (done) {
-              // End timer when streaming is complete
-              const endTime = Date.now()
-              setResponseDuration(endTime - startTime)
+              // Process any remaining content in buffer before finishing
+              if (chunkBuffer.trim()) {
+                const remainingLines = chunkBuffer.split('\n').filter(line => line.trim())
+                for (const line of remainingLines) {
+                  try {
+                    const event = JSON.parse(line)
+                    if (event.type === 'answer' && event.content) {
+                      accumulatedAnswer += event.content
+                    } else if (event.type === 'thinking' && event.content) {
+                      accumulatedThinking += event.content
+                    }
+                  } catch (parseError) {
+                    // Ignore malformed JSON at end of stream
+                    console.warn('Ignoring malformed JSON at end:', line)
+                  }
+                }
+              }
               
-              // Mark streaming as complete and trigger final render
+              // Final state updates
               flushSync(() => {
+                if (accumulatedAnswer.trim()) {
+                  setAnswer(accumulatedAnswer.trim())
+                }
+                if (accumulatedThinking.trim()) {
+                  setThinkingContent(accumulatedThinking)
+                }
                 setIsStreaming(false)
                 setStreamingComplete(true)
                 setIsProcessingAnswer(false)
               })
+              
+              // End timer when streaming is complete
+              const endTime = Date.now()
+              setResponseDuration(endTime - startTime)
               break
             }
             
-            // Decode the chunk and add it to the current chunk buffer
+            // Decode the chunk and add it to buffer
             const chunk = decoder.decode(value, { stream: true })
+            chunkBuffer += chunk
             
             if (chunk.length > 0) {
               console.log('Received chunk:', JSON.stringify(chunk))
               
-              // For books category, handle thinking and answer content types
-              if (selectedCategory === 'books') {
-                // The books endpoint now sends structured JSON events
-                // Parse each line as a JSON event
-                const lines = chunk.split('\n').filter(line => line.trim())
+              // Process complete lines from buffer
+              const lines = chunkBuffer.split('\n')
+              // Keep the last line in buffer (might be incomplete)
+              chunkBuffer = lines.pop() || ''
+              
+              // Process complete lines
+              for (const line of lines) {
+                if (!line.trim()) continue
                 
-                for (const line of lines) {
-                  try {
-                    const event = JSON.parse(line)
-                    
-                    if (event.type === 'thinking' && event.content) {
-                      accumulatedThinking += event.content
+                try {
+                  const event = JSON.parse(line)
+                  
+                  if (event.type === 'thinking' && event.content) {
+                    accumulatedThinking += event.content
+                    flushSync(() => {
+                      setThinkingContent(accumulatedThinking)
+                    })
+                  } else if (event.type === 'answer' && event.content) {
+                    // First answer content received, stop processing state immediately
+                    if (!hasStoppedProcessing) {
+                      hasStoppedProcessing = true
                       flushSync(() => {
-                        setThinkingContent(accumulatedThinking)
-                      })
-                    } else if (event.type === 'answer' && event.content) {
-                      // First answer content received, stop processing state immediately
-                      if (!hasStoppedProcessing) {
-                        hasStoppedProcessing = true
-                        flushSync(() => {
-                          setIsProcessingAnswer(false)
-                        })
-                      }
-                      
-                      accumulatedAnswer += event.content
-                      flushSync(() => {
-                        setAnswer(accumulatedAnswer.trim())
-                      })
-                    }
-                  } catch (parseError) {
-                    // Only treat as answer content if it doesn't look like incomplete JSON
-                    console.warn('Failed to parse JSON event:', parseError, 'Line:', line)
-                    
-                    // Check if this looks like a partial JSON (starts with { or contains "type":)
-                    if (!line.startsWith('{') && !line.includes('"type":') && !line.includes('"content":')) {
-                      // This might be actual text content, treat as answer
-                      if (!hasStoppedProcessing) {
-                        hasStoppedProcessing = true
-                        flushSync(() => {
-                          setIsProcessingAnswer(false)
-                        })
-                      }
-                      
-                      accumulatedAnswer += line
-                      flushSync(() => {
-                        setAnswer(accumulatedAnswer.trim())
-                      })
-                    }
-                    // Otherwise, ignore partial/malformed JSON
-                  }
-                }
-              } else {
-                // Handle tafseer category - now uses same structured JSON events as books
-                const lines = chunk.split('\n').filter(line => line.trim())
-                
-                for (const line of lines) {
-                  try {
-                    const event = JSON.parse(line)
-                    
-                    if (event.type === 'thinking' && event.content) {
-                      accumulatedThinking += event.content
-                      flushSync(() => {
-                        setThinkingContent(accumulatedThinking)
-                      })
-                    } else if (event.type === 'answer' && event.content) {
-                      // First answer content received, stop processing state immediately
-                      if (!hasStoppedProcessing) {
-                        hasStoppedProcessing = true
-                        flushSync(() => {
-                          setIsProcessingAnswer(false)
-                        })
-                      }
-                      
-                      accumulatedAnswer += event.content
-                      flushSync(() => {
-                        setAnswer(accumulatedAnswer.trim())
-                      })
-                    } else if (event.type === 'error' && event.content) {
-                      // Handle error events
-                      if (!hasStoppedProcessing) {
-                        hasStoppedProcessing = true
-                      }
-                      flushSync(() => {
-                        setAnswer(event.content)
                         setIsProcessingAnswer(false)
                       })
                     }
-                  } catch (parseError) {
-                    // Only treat as answer content if it doesn't look like incomplete JSON
-                    console.warn('Failed to parse JSON event:', parseError, 'Line:', line)
                     
-                    // Check if this looks like a partial JSON (starts with { or contains "type":)
-                    if (!line.startsWith('{') && !line.includes('"type":') && !line.includes('"content":')) {
-                      // This might be actual text content, treat as answer
-                      if (!hasStoppedProcessing) {
-                        hasStoppedProcessing = true
-                        flushSync(() => {
-                          setIsProcessingAnswer(false)
-                        })
-                      }
-                      
-                      accumulatedAnswer += line
-                      flushSync(() => {
-                        setAnswer(accumulatedAnswer.trim())
-                      })
+                    accumulatedAnswer += event.content
+                    flushSync(() => {
+                      setAnswer(accumulatedAnswer.trim())
+                    })
+                  } else if (event.type === 'error' && event.content) {
+                    // Handle error events
+                    if (!hasStoppedProcessing) {
+                      hasStoppedProcessing = true
                     }
-                    // Otherwise, ignore partial/malformed JSON
+                    flushSync(() => {
+                      setAnswer(event.content)
+                      setIsProcessingAnswer(false)
+                    })
                   }
+                } catch (parseError) {
+                  // Log but don't display malformed JSON
+                  console.warn('Skipping malformed JSON line:', line.substring(0, 100) + '...')
                 }
               }
             }
             
             chunkNumber++
             
-            // Add a small delay to ensure smooth rendering
-            await new Promise(resolve => setTimeout(resolve, 10))
-          }
-          
-          // Process any remaining content in the buffer
-          if (accumulatedAnswer.trim()) {
-            setAnswer(accumulatedAnswer.trim())
+            // Reduce delay for better mobile performance
+            await new Promise(resolve => setTimeout(resolve, 5))
           }
           
         } finally {
