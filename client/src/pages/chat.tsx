@@ -8,7 +8,7 @@ import { flushSync } from 'react-dom'
 import booksOptions from '@/data/books'
 import tafseerOptions from '@/data/tafseer'
 
-const API_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8787'
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8081' : ''
 
 interface ToolCall {
   name: string
@@ -19,6 +19,7 @@ interface ToolCall {
 export default function ChatPage() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
+  const [thinkingContent, setThinkingContent] = useState('')
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -117,6 +118,7 @@ export default function ChatPage() {
     setIsProcessingAnswer(true)
     setFinalAnswerReceived(false)
     setAnswer('') // Clear previous answer
+    setThinkingContent('') // Clear previous thinking content
     setToolCalls([]) // Clear previous tool calls
 
     try {
@@ -183,6 +185,7 @@ export default function ChatPage() {
         }
 
         let accumulatedAnswer = ''
+        let accumulatedThinking = ''
         let accumulatedToolCalls: ToolCall[] = []
         let currentChunk = ''
         let chunkNumber = 0
@@ -211,64 +214,112 @@ export default function ChatPage() {
             if (chunk.length > 0) {
               console.log('Received chunk:', JSON.stringify(chunk))
               
-              // Check if this chunk contains a tool call
-              if (chunk.includes('🔧 **Tool Call**')) {
-                console.log('Tool call chunk detected')
-                // This chunk contains tool call information
-                currentChunk += chunk
+              // For books category, handle thinking and answer content types
+              if (selectedCategory === 'books') {
+                // The books endpoint now sends structured JSON events
+                // Parse each line as a JSON event
+                const lines = chunk.split('\n').filter(line => line.trim())
                 
-                // Try to extract complete tool calls
-                const toolCallPattern = /🔧 \*\*Tool Call\*\*:\s*(.+?)\n📝 \*\*Arguments\*\*:\s*({.*?})\s*(?=🔧 \*\*Tool Call\*\*|$)/gs;
-                let match;
-                let foundAny = false;
-                while ((match = toolCallPattern.exec(currentChunk)) !== null) {
-                  const toolCallText = match[0];
-                  const toolCall = parseToolCall(toolCallText);
-                  if (toolCall) {
-                    console.log('Parsed tool call:', toolCall);
-                    accumulatedToolCalls.push(toolCall);
+                for (const line of lines) {
+                  try {
+                    const event = JSON.parse(line)
+                    
+                    if (event.type === 'thinking' && event.content) {
+                      accumulatedThinking += event.content
+                      flushSync(() => {
+                        setThinkingContent(accumulatedThinking)
+                      })
+                    } else if (event.type === 'answer' && event.content) {
+                      // First answer content received, stop processing state and mark thinking complete
+                      if (isProcessingAnswer) {
+                        flushSync(() => {
+                          setIsProcessingAnswer(false)
+                        })
+                      }
+                      
+                      accumulatedAnswer += event.content
+                      flushSync(() => {
+                        setAnswer(accumulatedAnswer.trim())
+                      })
+                    }
+                  } catch (parseError) {
+                    // If not valid JSON, treat as answer content (fallback)
+                    console.warn('Failed to parse JSON event:', parseError)
+                    
+                    // Mark thinking as complete since we're receiving answer content
+                    if (isProcessingAnswer) {
+                      flushSync(() => {
+                        setIsProcessingAnswer(false)
+                      })
+                    }
+                    
+                    accumulatedAnswer += line
                     flushSync(() => {
-                      setToolCalls([...accumulatedToolCalls]);
-                    });
-                    foundAny = true;
+                      setAnswer(accumulatedAnswer.trim())
+                    })
                   }
                 }
-                // Remove all matched tool calls from the buffer
-                if (foundAny) {
-                  currentChunk = currentChunk.replace(toolCallPattern, '');
-                }
-              } else if (chunk.includes('📝 **Final Answer**:')) {
-                console.log('Final answer chunk detected')
-                // This chunk contains the final answer
-                const finalAnswerMatch = chunk.match(/📝 \*\*Final Answer\*\*:\n([\s\S]*)/);
-                if (finalAnswerMatch) {
-                  const answerContent = finalAnswerMatch[1];
-                  console.log('Extracted final answer content:', answerContent);
+              } else {
+                // Handle tafseer category (existing logic for tool calls)
+                // Check if this chunk contains a tool call
+                if (chunk.includes('🔧 **Tool Call**')) {
+                  console.log('Tool call chunk detected')
+                  // This chunk contains tool call information
+                  currentChunk += chunk
                   
-                  // First answer content received, stop processing state
-                  if (isProcessingAnswer) {
-                    setIsProcessingAnswer(false)
+                  // Try to extract complete tool calls
+                  const toolCallPattern = /🔧 \*\*Tool Call\*\*:\s*(.+?)\n📝 \*\*Arguments\*\*:\s*({.*?})\s*(?=🔧 \*\*Tool Call\*\*|$)/gs;
+                  let match;
+                  let foundAny = false;
+                  while ((match = toolCallPattern.exec(currentChunk)) !== null) {
+                    const toolCallText = match[0];
+                    const toolCall = parseToolCall(toolCallText);
+                    if (toolCall) {
+                      console.log('Parsed tool call:', toolCall);
+                      accumulatedToolCalls.push(toolCall);
+                      flushSync(() => {
+                        setToolCalls([...accumulatedToolCalls]);
+                      });
+                      foundAny = true;
+                    }
                   }
+                  // Remove all matched tool calls from the buffer
+                  if (foundAny) {
+                    currentChunk = currentChunk.replace(toolCallPattern, '');
+                  }
+                } else if (chunk.includes('📝 **Final Answer**')) {
+                  console.log('Final answer chunk detected')
+                  // This chunk contains the final answer
+                  const finalAnswerMatch = chunk.match(/📝 \*\*Final Answer\*\*:\n([\s\S]*)/);
+                  if (finalAnswerMatch) {
+                    const answerContent = finalAnswerMatch[1];
+                    console.log('Extracted final answer content:', answerContent);
+                    
+                    // First answer content received, stop processing state
+                    if (isProcessingAnswer) {
+                      setIsProcessingAnswer(false)
+                    }
+                    
+                    // Mark that final answer has been received
+                    setFinalAnswerReceived(true)
+                    
+                    accumulatedAnswer += answerContent
+                    
+                    flushSync(() => {
+                      setAnswer(accumulatedAnswer.trim())
+                    })
+                  }
+                } else {
+                  console.log('Regular content chunk')
+                  // This chunk contains regular answer content
+                  // Don't stop processing state for regular content - only for final answer
                   
-                  // Mark that final answer has been received
-                  setFinalAnswerReceived(true)
-                  
-                  accumulatedAnswer += answerContent
+                  accumulatedAnswer += chunk
                   
                   flushSync(() => {
                     setAnswer(accumulatedAnswer.trim())
                   })
                 }
-              } else {
-                console.log('Regular content chunk')
-                // This chunk contains regular answer content
-                // Don't stop processing state for regular content - only for final answer
-                
-                accumulatedAnswer += chunk
-                
-                flushSync(() => {
-                  setAnswer(accumulatedAnswer.trim())
-                })
               }
             }
             
@@ -323,6 +374,7 @@ export default function ChatPage() {
   const handleNewQuestion = () => {
     setQuestion('')
     setAnswer('')
+    setThinkingContent('')
     setToolCalls([])
     setStreamingComplete(false)
     setIsProcessingAnswer(false)
@@ -357,11 +409,10 @@ export default function ChatPage() {
 
         <ThinkingDisplay 
           toolCalls={toolCalls}
-          isVisible={toolCalls.length > 0 || isLoading || isProcessingAnswer}
-          isLoading={isLoading || isProcessingAnswer}
+          isVisible={toolCalls.length > 0 || (selectedCategory === 'books' && thinkingContent.length > 0)}
           shouldCollapse={finalAnswerReceived}
           selectedCategory={selectedCategory}
-          selectedBookName={currentIndexOptions.find(opt => opt.value === selectedIndex)?.label}
+          thinkingContent={thinkingContent}
         />
 
         <AnswerDisplay

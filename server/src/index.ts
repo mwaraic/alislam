@@ -31,10 +31,10 @@ app.use('*', async (c, next) => {
   // In local development, merge process.env with c.env; in Cloudflare Workers, use c.env
   const env = {
     ...c.env,
-    COHERE_API_KEY: c.env.COHERE_API_KEY || process.env.COHERE_API_KEY,
-    GEMINI_API_KEY: c.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
-    PINECONE_API_KEY: c.env.PINECONE_API_KEY || process.env.PINECONE_API_KEY,
-    PINECONE_API_KEY_2: c.env.PINECONE_API_KEY_2 || process.env.PINECONE_API_KEY_2,
+    COHERE_API_KEY: c.env.COHERE_API_KEY,
+    GEMINI_API_KEY: c.env.GEMINI_API_KEY,
+    PINECONE_API_KEY: c.env.PINECONE_API_KEY,
+    PINECONE_API_KEY_2: c.env.PINECONE_API_KEY_2,
   } as Bindings
 
   c.set('env', env)
@@ -74,6 +74,34 @@ app.get('*', async (c) => {
         }
       })
     }
+    
+    // For container deployment, serve files from filesystem
+    const fs = await import('fs')
+    const path = await import('path')
+    
+    const requestPath = new URL(c.req.url).pathname
+    let filePath = path.join(process.cwd(), 'client/dist', requestPath === '/' ? 'index.html' : requestPath)
+    
+    // Check if file exists
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath)
+      const ext = path.extname(filePath)
+      const contentType = getContentType(ext)
+      
+      return new Response(content, {
+        headers: { 'Content-Type': contentType }
+      })
+    }
+    
+    // If file not found, serve index.html for SPA routing
+    const indexPath = path.join(process.cwd(), 'client/dist', 'index.html')
+    if (fs.existsSync(indexPath)) {
+      const content = fs.readFileSync(indexPath)
+      return new Response(content, {
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
+    
   } catch (e) {
     console.log('Asset serving error:', e)
   }
@@ -88,5 +116,27 @@ app.get('*', async (c) => {
     }
   })
 })
+
+// Helper function to get content type based on file extension
+function getContentType(ext: string): string {
+  const contentTypes: { [key: string]: string } = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject'
+  }
+  
+  return contentTypes[ext] || 'application/octet-stream'
+}
 
 export default app 

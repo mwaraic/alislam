@@ -30,7 +30,7 @@ export class AgentService {
     if (!this.llm) {
       this.llm = new ChatGoogleGenerativeAI({
         apiKey: env.GEMINI_API_KEY,
-        modelName: 'gemini-2.5-flash-preview-05-20',
+        modelName: 'gemini-2.5-pro-preview-05-06',
         temperature: 0.7,
         streaming: false
       })
@@ -84,7 +84,7 @@ export class AgentService {
       
       const stream = await agent.stream(inputs, 
         { configurable: { thread_id: "agent-session" } },
-        { streamMode: "values" }
+        { streamMode: "messages" }
       );
       
       try {

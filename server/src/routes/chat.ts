@@ -55,10 +55,8 @@ chatRoute.post('/', async (c) => {
     // Start the streaming process
     ;(async () => {
       try {        
-        // Use streamEvents to get token-level streaming from the LLM
-        const eventStream = ragChain.streamEvents({
-          question: String(message).trim()
-        }, { version: "v1" })
+        // Call ragChain with the question to get the async generator
+        const eventStream = await ragChain(String(message).trim())
 
         console.log('eventStream', eventStream)
 
@@ -66,9 +64,9 @@ chatRoute.post('/', async (c) => {
         let totalChars = 0
         
         for await (const event of eventStream) {
-          // Look for LLM streaming events which contain the actual content
-          if (event.event === "on_llm_stream") {
-            const chunk = event.data?.chunk?.content || event.data?.chunk?.text || event.data?.chunk
+          // Process different event types from the async generator
+          if ((event.type === 'answer' || event.type === 'thinking') && event.content) {
+            const chunk = event.content
             
             if (chunk && typeof chunk === 'string' && chunk.length > 0) {
               chunkCount++
@@ -79,8 +77,13 @@ chatRoute.post('/', async (c) => {
                 break
               }
               
-              // Write chunk immediately
-              const encodedChunk = encoder.encode(chunk)
+              // Send structured JSON event with type and content
+              const structuredEvent = JSON.stringify({
+                type: event.type,
+                content: chunk
+              }) + '\n'
+              
+              const encodedChunk = encoder.encode(structuredEvent)
               await writer.write(encodedChunk)
               
               // Add a very small delay to ensure smooth delivery
