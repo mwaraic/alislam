@@ -53,10 +53,27 @@ agentRoute.post('/', async (c) => {
         // Use the agent service to process the query with streaming
         const queryGenerator = agentService.processAlislamQuery(prompt.trim(), namespace, env)
         
-        for await (const chunk of queryGenerator) {
-          if (chunk && typeof chunk === 'string' && chunk.length > 0) {
-            // Write chunk immediately
-            const encodedChunk = encoder.encode(chunk)
+        for await (const event of queryGenerator) {
+          if (event && typeof event === 'object' && event.type && event.content) {
+            // Send structured JSON event with type and content
+            const structuredEvent = JSON.stringify({
+              type: event.type,
+              content: event.content
+            }) + '\n'
+            
+            const encodedChunk = encoder.encode(structuredEvent)
+            await writer.write(encodedChunk)
+            
+            // Add a very small delay to ensure smooth delivery
+            await new Promise(resolve => setTimeout(resolve, 1))
+          } else if (event && typeof event === 'string' && event.length > 0) {
+            // Legacy fallback for string events - treat as answer
+            const structuredEvent = JSON.stringify({
+              type: 'answer',
+              content: event
+            }) + '\n'
+            
+            const encodedChunk = encoder.encode(structuredEvent)
             await writer.write(encodedChunk)
             
             // Add a very small delay to ensure smooth delivery

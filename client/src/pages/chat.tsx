@@ -8,7 +8,7 @@ import { flushSync } from 'react-dom'
 import booksOptions from '@/data/books'
 import tafseerOptions from '@/data/tafseer'
 
-const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8081' : ''
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8787' : ''
 
 interface ToolCall {
   name: string
@@ -56,54 +56,6 @@ export default function ChatPage() {
       .replace(/\n{3,}/g, '\n\n')
       .replace(/^\n+/, '')
   }, [answer])
-
-  // Function to parse tool calls from streamed content
-  const parseToolCall = (content: string): ToolCall | null => {
-    // Look for tool call pattern: 🔧 **Tool Call**: toolName\n📝 **Arguments**: {...}
-    const toolCallMatch = content.match(/🔧 \*\*Tool Call\*\*:\s*(.+?)\n📝 \*\*Arguments\*\*:\s*(.+)/s)
-    
-    if (toolCallMatch) {
-      const toolName = toolCallMatch[1].trim()
-      let argsString = toolCallMatch[2].trim()
-      
-      try {
-        // Remove any trailing newlines and extra content after the JSON
-        const jsonMatch = argsString.match(/(\{.*?\})/s)
-        if (jsonMatch) {
-          argsString = jsonMatch[1]
-        }
-        
-        const args = JSON.parse(argsString)
-        return {
-          name: toolName,
-          arguments: args,
-          timestamp: Date.now()
-        }
-      } catch (error) {
-        console.warn('Failed to parse tool call arguments:', error)
-        console.warn('Raw args string:', argsString)
-        
-        // Try to extract just the query if it's a simple case
-        const simpleMatch = argsString.match(/["']?query["']?\s*:\s*["'](.+?)["']/s)
-        if (simpleMatch) {
-          return {
-            name: toolName,
-            arguments: { query: simpleMatch[1] },
-            timestamp: Date.now()
-          }
-        }
-        
-        // Fall back to raw string
-        return {
-          name: toolName,
-          arguments: { raw: argsString },
-          timestamp: Date.now()
-        }
-      }
-    }
-    
-    return null
-  }
 
   const handleSubmit = async () => {
     if (!question.trim() || isLoading) return
@@ -186,9 +138,8 @@ export default function ChatPage() {
 
         let accumulatedAnswer = ''
         let accumulatedThinking = ''
-        let accumulatedToolCalls: ToolCall[] = []
-        let currentChunk = ''
         let chunkNumber = 0
+        let hasStoppedProcessing = false
         
         try {
           while (true) {
@@ -230,8 +181,9 @@ export default function ChatPage() {
                         setThinkingContent(accumulatedThinking)
                       })
                     } else if (event.type === 'answer' && event.content) {
-                      // First answer content received, stop processing state and mark thinking complete
-                      if (isProcessingAnswer) {
+                      // First answer content received, stop processing state immediately
+                      if (!hasStoppedProcessing) {
+                        hasStoppedProcessing = true
                         flushSync(() => {
                           setIsProcessingAnswer(false)
                         })
@@ -243,82 +195,84 @@ export default function ChatPage() {
                       })
                     }
                   } catch (parseError) {
-                    // If not valid JSON, treat as answer content (fallback)
-                    console.warn('Failed to parse JSON event:', parseError)
+                    // Only treat as answer content if it doesn't look like incomplete JSON
+                    console.warn('Failed to parse JSON event:', parseError, 'Line:', line)
                     
-                    // Mark thinking as complete since we're receiving answer content
-                    if (isProcessingAnswer) {
+                    // Check if this looks like a partial JSON (starts with { or contains "type":)
+                    if (!line.startsWith('{') && !line.includes('"type":') && !line.includes('"content":')) {
+                      // This might be actual text content, treat as answer
+                      if (!hasStoppedProcessing) {
+                        hasStoppedProcessing = true
+                        flushSync(() => {
+                          setIsProcessingAnswer(false)
+                        })
+                      }
+                      
+                      accumulatedAnswer += line
                       flushSync(() => {
-                        setIsProcessingAnswer(false)
+                        setAnswer(accumulatedAnswer.trim())
                       })
                     }
-                    
-                    accumulatedAnswer += line
-                    flushSync(() => {
-                      setAnswer(accumulatedAnswer.trim())
-                    })
+                    // Otherwise, ignore partial/malformed JSON
                   }
                 }
               } else {
-                // Handle tafseer category (existing logic for tool calls)
-                // Check if this chunk contains a tool call
-                if (chunk.includes('🔧 **Tool Call**')) {
-                  console.log('Tool call chunk detected')
-                  // This chunk contains tool call information
-                  currentChunk += chunk
-                  
-                  // Try to extract complete tool calls
-                  const toolCallPattern = /🔧 \*\*Tool Call\*\*:\s*(.+?)\n📝 \*\*Arguments\*\*:\s*({.*?})\s*(?=🔧 \*\*Tool Call\*\*|$)/gs;
-                  let match;
-                  let foundAny = false;
-                  while ((match = toolCallPattern.exec(currentChunk)) !== null) {
-                    const toolCallText = match[0];
-                    const toolCall = parseToolCall(toolCallText);
-                    if (toolCall) {
-                      console.log('Parsed tool call:', toolCall);
-                      accumulatedToolCalls.push(toolCall);
+                // Handle tafseer category - now uses same structured JSON events as books
+                const lines = chunk.split('\n').filter(line => line.trim())
+                
+                for (const line of lines) {
+                  try {
+                    const event = JSON.parse(line)
+                    
+                    if (event.type === 'thinking' && event.content) {
+                      accumulatedThinking += event.content
                       flushSync(() => {
-                        setToolCalls([...accumulatedToolCalls]);
-                      });
-                      foundAny = true;
+                        setThinkingContent(accumulatedThinking)
+                      })
+                    } else if (event.type === 'answer' && event.content) {
+                      // First answer content received, stop processing state immediately
+                      if (!hasStoppedProcessing) {
+                        hasStoppedProcessing = true
+                        flushSync(() => {
+                          setIsProcessingAnswer(false)
+                        })
+                      }
+                      
+                      accumulatedAnswer += event.content
+                      flushSync(() => {
+                        setAnswer(accumulatedAnswer.trim())
+                      })
+                    } else if (event.type === 'error' && event.content) {
+                      // Handle error events
+                      if (!hasStoppedProcessing) {
+                        hasStoppedProcessing = true
+                      }
+                      flushSync(() => {
+                        setAnswer(event.content)
+                        setIsProcessingAnswer(false)
+                      })
                     }
-                  }
-                  // Remove all matched tool calls from the buffer
-                  if (foundAny) {
-                    currentChunk = currentChunk.replace(toolCallPattern, '');
-                  }
-                } else if (chunk.includes('📝 **Final Answer**')) {
-                  console.log('Final answer chunk detected')
-                  // This chunk contains the final answer
-                  const finalAnswerMatch = chunk.match(/📝 \*\*Final Answer\*\*:\n([\s\S]*)/);
-                  if (finalAnswerMatch) {
-                    const answerContent = finalAnswerMatch[1];
-                    console.log('Extracted final answer content:', answerContent);
+                  } catch (parseError) {
+                    // Only treat as answer content if it doesn't look like incomplete JSON
+                    console.warn('Failed to parse JSON event:', parseError, 'Line:', line)
                     
-                    // First answer content received, stop processing state
-                    if (isProcessingAnswer) {
-                      setIsProcessingAnswer(false)
+                    // Check if this looks like a partial JSON (starts with { or contains "type":)
+                    if (!line.startsWith('{') && !line.includes('"type":') && !line.includes('"content":')) {
+                      // This might be actual text content, treat as answer
+                      if (!hasStoppedProcessing) {
+                        hasStoppedProcessing = true
+                        flushSync(() => {
+                          setIsProcessingAnswer(false)
+                        })
+                      }
+                      
+                      accumulatedAnswer += line
+                      flushSync(() => {
+                        setAnswer(accumulatedAnswer.trim())
+                      })
                     }
-                    
-                    // Mark that final answer has been received
-                    setFinalAnswerReceived(true)
-                    
-                    accumulatedAnswer += answerContent
-                    
-                    flushSync(() => {
-                      setAnswer(accumulatedAnswer.trim())
-                    })
+                    // Otherwise, ignore partial/malformed JSON
                   }
-                } else {
-                  console.log('Regular content chunk')
-                  // This chunk contains regular answer content
-                  // Don't stop processing state for regular content - only for final answer
-                  
-                  accumulatedAnswer += chunk
-                  
-                  flushSync(() => {
-                    setAnswer(accumulatedAnswer.trim())
-                  })
                 }
               }
             }
@@ -330,16 +284,8 @@ export default function ChatPage() {
           }
           
           // Process any remaining content in the buffer
-          if (currentChunk.trim()) {
-            const toolCall = parseToolCall(currentChunk)
-            
-            if (toolCall) {
-              accumulatedToolCalls.push(toolCall)
-              setToolCalls([...accumulatedToolCalls])
-            } else {
-              accumulatedAnswer += currentChunk
-              setAnswer(accumulatedAnswer.trim())
-            }
+          if (accumulatedAnswer.trim()) {
+            setAnswer(accumulatedAnswer.trim())
           }
           
         } finally {
@@ -409,10 +355,10 @@ export default function ChatPage() {
 
         <ThinkingDisplay 
           toolCalls={toolCalls}
-          isVisible={toolCalls.length > 0 || (selectedCategory === 'books' && thinkingContent.length > 0)}
+          isVisible={toolCalls.length > 0 || thinkingContent.length > 0}
           shouldCollapse={finalAnswerReceived}
-          selectedCategory={selectedCategory}
           thinkingContent={thinkingContent}
+          isProcessing={isProcessingAnswer}
         />
 
         <AnswerDisplay
