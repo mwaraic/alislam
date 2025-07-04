@@ -15,11 +15,14 @@ const templateQuestions = {
     'حضرت مسیح موعود علیہ الصلوٰۃ والسلام نے بدعات (نئی رسومات) کے خلاف کون سا موقف اختیار فرمایا؟'
   ],
   'tafseer-hazrat-masih-maud': [
-    'What is the meaning of word Tawaffa?',
+    'What is the meaning of word تَوَفّى?',
+  ],
+  'haqaiq-ul-furqan': [
+    'قرآن کو سمجھنے کا کیا طریقہ ہے؟',
   ],
   'five-volume-commentary': [
     'Did Napolean pass the Red Sea where Prophet Moses A.S did?',
-  ]
+  ],
 }
 
 export function QuestionTemplates({

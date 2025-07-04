@@ -3,7 +3,7 @@ import { SearchCommentaryTool } from '../tools/search_commentary'
 import { FindVerseTool } from '../tools/find_verse'
 import { prompt as fiveVolumeCommentaryPrompt } from '../prompts/five-volume-commentary'
 import { prompt as tafseerHazratMasihMaudPrompt } from '../prompts/tafseer-hazrat-masih-maud'
-
+import { prompt as haqaiqUlFurqanPrompt } from '../prompts/haqaiq-ul-furqan'
 export type AgentBindings = {
   GEMINI_API_KEY: string
   PINECONE_API_KEY: string
@@ -158,7 +158,7 @@ export class AgentService {
         })
       }
       
-      const systemPrompt = namespace === 'tafseer-hazrat-masih-maud' ? tafseerHazratMasihMaudPrompt : fiveVolumeCommentaryPrompt
+      const systemPrompt = namespace === 'tafseer-hazrat-masih-maud' ? tafseerHazratMasihMaudPrompt : namespace === 'quran-english-five-volume-1' ? fiveVolumeCommentaryPrompt : haqaiqUlFurqanPrompt
       
       // Create a comprehensive prompt with function results
       const contextPrompt = `
@@ -219,7 +219,7 @@ Please synthesize this information to directly answer the user's original questi
         return
       }
 
-      const systemPrompt = namespace === 'tafseer-hazrat-masih-maud' ? tafseerHazratMasihMaudPrompt : fiveVolumeCommentaryPrompt
+      const systemPrompt = namespace === 'tafseer-hazrat-masih-maud' ? tafseerHazratMasihMaudPrompt : namespace === 'quran-english-five-volume-1' ? fiveVolumeCommentaryPrompt : haqaiqUlFurqanPrompt
       const functionDeclarations = this.getFunctionDeclarations()
 
       // Single generation call with function calling capability

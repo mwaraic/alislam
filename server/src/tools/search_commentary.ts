@@ -54,7 +54,7 @@ export class SearchCommentaryTool {
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetch('https://embedding-service.tickrbot.workers.dev/embedding', {
+        const response = await fetch('http://localhost:8000/embedding', {
           method: 'POST',
           body: JSON.stringify({ query }),
           headers: {
